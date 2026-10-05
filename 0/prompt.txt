@@ -1,25 +1,3 @@
-read `README.md` and summarize it in one sentence, without changing files. Let that response finish.
-
----
-
-Before implementing Project A, verify that Entire captured our previous turn.
-
-Run these read-only checks:
-
-- git rev-parse --show-toplevel
-- git remote get-url origin
-- entire version
-- entire status
-- entire agent-help
-
-Use the installed version’s documented inspection commands to verify that the previous README-reading turn was captured for this repository and Codex session.
-
-Show the repository path, enabled agent, checkpoint sync destination, and the session ID or other evidence confirming capture. Do not treat “Enabled” alone as proof that the turn was recorded.
-
-Do not change configuration or start implementation. If verification fails, show the exact error or missing evidence.
-
----
-
 Work in my financial-health-brief repository.
 
 1. Look in my Downloads folder for interview-r62mbg-20261005-1520.md. If you cannot find it, ask me for its location. Do not recreate it from a summary.
