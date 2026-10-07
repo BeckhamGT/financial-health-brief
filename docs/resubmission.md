@@ -285,3 +285,37 @@ operator quarantine. Modern git-ref checkpoint access differs from the course's
 legacy branch format and facilitator access remains untested. The optional scanner
 was unavailable; actual manual review and focused boundary tests were completed.
 No Classroom submission or facilitator/stakeholder communication is authorized.
+
+### Observed publication and capture limitation
+
+Normal commit `98ea4b375f2dce16df68a60b03afe404487b97c3` linked checkpoint
+`01M4BX9N5XZR5XQZYG0K8WDPH5`. Normal hooks condensed both this build session and
+operator session `01a117bb-d557-7f03-a3a0-2db7bf41af0d`; Entire doctor then reported
+no stuck sessions and passing Git/Codex hooks and trust records. The normal push
+succeeded. A fresh remote query returned the exact main commit, the new checkpoint
+ref object `2c7815b77ac581da3b170f6917aabf9ffca35d5b`, and all four existing
+checkpoint refs. The previous checkpoint's pending transcript-finalization commit
+was also synced normally, preserving its parent history.
+
+**Exact remote SOURCE equality did not pass.** Stored native command stdout is
+present in both session transcripts. Its counts, tabs, versions, fetch timestamps
+and content hashes match the respective report snapshots, but Entire replaced
+each public Google spreadsheet ID and corresponding URL segment with `REDACTED`.
+This affects both full and compact stored transcripts. Live transcript inspection
+before condensation had matched all fields exactly; that cannot establish exact
+preservation in the pushed checkpoint. The initial stored-equality assertion failed
+and subsequent field comparison identified these two changed fields per source.
+
+The [installed-version security documentation](https://raw.githubusercontent.com/entireio/cli/v0.11.3/docs/security-and-privacy.md)
+describes redaction before writing git objects and always-on detectors, including
+entropy scoring. CLI configure help provides no identity allowlist. No supported
+remedy preserving the existing configuration was found. Capture configuration,
+original transcripts and prior checkpoints were preserved; no fabricated transcript,
+manual replacement of REDACTED values, secret-scanning bypass or empty legacy
+branch was used. The unchanged live URLs remain in the submitted source arguments,
+normalized provenance and report metadata. They are business evidence, not secrets.
+
+Record this as a capture limitation for facilitator review, not full capture
+compliance. The additional documentation commit preserves this discovery in normal
+history. Final remote object/content verification and identifiers are reported in
+the recorded handoff; no stakeholder approval or detailed learner checks are added.
