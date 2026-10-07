@@ -1,0 +1,26 @@
+Use $daily-financial-health-brief to prepare Quillhaven Academy's Daily Financial
+Health and Budget Brief for the operations meeting on 2026-08-12, reporting date
+2026-08-11, and prior business date 2026-08-10 (August 2026 budget period).
+
+Use these three live viewer inputs:
+- https://docs.google.com/spreadsheets/d/REDACTED
+- https://docs.google.com/spreadsheets/d/REDACTED
+- https://docs.google.com/spreadsheets/d/REDACTED
+
+Keep sources read-only. Write draft artifacts only under
+/private/tmp/project-a-operator-01a11761/deliverables; do not edit repository files,
+Git refs, or the live Sheets. Do not make payments, spending decisions, dispute
+resolutions, source edits or communications. Do not read credentials or unrelated
+personal files. Business uncertainty requires clarification, not invented values.
+
+First establish the current repository and your own Entire session identity using
+installed command help. Verify that this request and a shell marker's actual
+stdout are present in your transcript before processing financial inputs. Confirm
+whether this host discovered and loaded the named skill; distinguish observation
+from assumption. Do not reconfigure recording or bypass hook trust.
+
+Follow the skill using fresh source evidence. Keep source audit records visible in
+stdout. Present the management summary, five signed figures, principal budget
+findings, dated revenue/balance comparisons, and unresolved queue to the operator.
+Explain any business or workflow limitation, and keep the result Draft for human
+review. Your response is operator evaluation evidence, not stakeholder approval.
