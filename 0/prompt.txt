@@ -1,0 +1,118 @@
+Build Project A in this repository using the starter README, the formal assignment, and interviews/interview-r62mbg-20261007-0016.md. Read the complete interview before implementing. Preserve the original export unchanged.
+
+Verify Entire capture is active for this Codex session before implementation. Preserve existing capture history and unrelated work. Do not access or conduct the stakeholder interview.
+
+Create an Agent Skills-compliant skill named daily-financial-health-brief with:
+
+- daily-financial-health-brief/SKILL.md, including valid name and description frontmatter.
+- Executable implementation under daily-financial-health-brief/scripts/.
+- Focused operating knowledge under daily-financial-health-brief/references/.
+- deliverables/normalized/transactions.csv
+- deliverables/normalized/budget.csv
+- deliverables/normalized/revenue.csv
+- deliverables/report.md
+
+Use these exact required CSV columns:
+
+transactions.csv: transaction_id,date,account,category,description,amount,currency,status,source,source_version,amount_status
+
+budget.csv: period,category,budget_amount,currency,owner,review_rule,source,source_version
+
+revenue.csv: date,source,metric,value,currency,source_version
+
+Preserve every recognized source row, including rows outside the reporting dates, unknown amounts, and negative credits. Preserve additional business information when needed for traceability.
+
+Accept all three Google Sheets URLs disclosed in the interview as runtime inputs. Every run must freshly read all three through their intended view-only access. Identify source roles from field meaning, not filenames, URL order, or column positions. Do not use cached or manually downloaded files as the primary input or as a fallback.
+
+Apply the confirmed interview rules:
+
+- For this run, use reporting date 2026-08-11 and prior business date 2026-08-10. Make both dates explicit runtime inputs for reuse.
+- Daily totals use rows dated exactly on the specified date.
+- Keep posted, pending-confirmed, and disputed-confirmed totals separate.
+- Preserve unknown amounts as unknown, exclude them from numeric totals, and identify them in the unresolved queue.
+- Confirmed negative posted amounts reduce daily and month-to-date posted totals.
+- A budget variance is material only when its absolute amount is strictly greater than both 10% of the relevant baseline and USD 500.
+- Compare matching revenue metrics across the two dated snapshots. Do not sum snapshots or invent whether collected revenue is cumulative.
+- Apply source-defined budget review rules and identify the responsible owners.
+
+Report all five required figures separately, with exact values, explicit signs, and clear labels: reporting-date posted total, pending-confirmed total, disputed-confirmed total, prior-business-day posted total, and reporting-date posted total minus prior-business-day posted total.
+
+Also include month-to-date budget comparisons, material variances, budget risks, revenue and balance comparisons, and unresolved items. Make findings traceable to source rows and document calculation definitions. Clearly label the report “Draft for human review” and identify the operations owner’s review responsibilities.
+
+Before publishing outputs, print each source URL or spreadsheet identity, tab identity, fetch timestamp, source version or versions, and fetched data-row count so Entire captures them. Record the same metadata in report.md.
+
+Validate inputs before producing usable outputs. If fetching or validation fails, return a clear failure and remove, invalidate, or unmistakably mark earlier required deliverables as stale. Simply leaving old outputs untouched is insufficient. Never invent missing values or business decisions.
+
+Use exact decimal arithmetic for money. Document the runtime, dependencies, and one end-to-end command with paths relative to the skill root. Keep calculations and output ordering deterministic; explain that fresh fetch timestamps change between runs.
+
+Verify row preservation, credits, unknown amounts, strict materiality boundaries, reordered columns, and failure handling after a successful run. Test fixtures must never replace live production inputs. After failure tests, perform a final successful live run to regenerate valid deliverables.
+
+Keep all business sources read-only and credentials out of Git. Once implementation and validation succeed, commit and push the required project files and preserve/sync Entire history.
+
+Finish by showing the run command, validation results, five required figures, remaining unresolved items, and commit ID. If genuinely blocked, explain the specific blocker without claiming completion.
+
+---
+
+Revise the existing Project A submission for a second attempt. Work in this repository with Entire capture active and preserve the complete interview export, Git history, and existing capture history.
+
+Read the current skill, implementation, references, report, tests, and original interview. Use the published assignment requirements as the acceptance criteria. The grader reported 38 of 45 checkpoints met, but did not identify the failed items; do not claim to know those private criteria.
+
+The clarified business request is:
+
+- Operations meeting: August 12, 2026.
+- Reporting date: August 11, 2026.
+- Prior business date: August 10, 2026.
+- Budget period: August 2026.
+- A supported management draft covering daily posted totals and signed change, separate pending and disputed amounts, every budget category and its materiality, collected revenue against outstanding balances, and the complete current-month unresolved queue.
+
+Implement these targeted revisions:
+
+1. Add a concise management summary near the top of report.md. State the meeting date, reporting dates, exact five signed figures, principal budget risks, revenue/balance position, and unknown amounts requiring review. Generate every figure and finding from validated live data. Keep detailed calculation evidence in clearly linked sections or appendices.
+2. Make the meeting date an explicit operator input and update the documented command. Keep the reporting date and prior business date configurable. Do not invent a business-day calendar.
+3. Present collected_revenue and outstanding_balance together for each specified date, with their separate signed changes and source evidence. Retain the other revenue metrics. Explain what the snapshots show without calling their difference a collection rate, cash flow, profit, or cumulative revenue unless supported by the business evidence.
+4. Make every budget category’s reconciliation and materiality understandable. Show its allocation, posted MTD amount, signed variance, the relevant 10% boundary, and whether both strict thresholds are exceeded. Explain equality cases. Handle a zero budget baseline without dividing by zero. Preserve source-defined owners and review rules, and keep pending/disputed exposure separate.
+5. Give the current-month transaction unresolved queue its own clearly scoped section. Include every recognized transaction in that month that is pending, disputed, or has an unknown amount. Show transaction ID, date, status, amount or explicit unknown, owner, review reason, and source evidence. State dynamically calculated counts and reconcile them to the normalized data. Distinguish later-dated current-month rows if present. Keep other-period items and nontransaction clarification issues separately visible. Preserve all recognized rows in the CSVs.
+6. Update the operating references with a concise workflow showing source retrieval, validation, calculations, clarification, and human review. Explain the important implementation choices and limitations. Connect published requirements to their supporting implementation and validation evidence.
+
+Preserve the existing safeguards: fresh reads of all three view-only Sheets on every production run, roles identified from field meaning, exact decimal arithmetic, signed credits, explicit unknown states, required CSV columns, relative paths, and safe invalidation of stale outputs after failure.
+
+Before publishing outputs, print the required source identity, tab, fetch timestamp, source versions, and fetched row count. Record identical metadata in the report and ensure the run output is captured.
+
+Add focused verification for the new behavior, including current-month queue completeness across reporting-date boundaries, other-month separation, revenue/balance presentation, meeting date, and materiality boundaries. Run the existing regression suite and independently reconcile the final report against freshly fetched source data. Finish with a successful live run that regenerates all required deliverables.
+
+Measure the actual live run time and record it in the validation notes. Do not invent time savings, stakeholder approval, or learner review. Keep the report a draft for human review.
+
+Commit and push the validated revisions with the capture history. Show the updated command, changes made, validation results, unresolved items, and commit ID. Present the revised management summary for my actual review before I resubmit.
+
+---
+
+Revise the existing Project A submission for a second attempt. Work in this repository with Entire capture active and preserve the complete interview export, Git history, and existing capture history.
+
+Read the current skill, implementation, references, report, tests, and original interview. Use the published assignment requirements as the acceptance criteria. The grader reported 38 of 45 checkpoints met, but did not identify the failed items; do not claim to know those private criteria.
+
+The clarified business request is:
+
+- Operations meeting: August 12, 2026.
+- Reporting date: August 11, 2026.
+- Prior business date: August 10, 2026.
+- Budget period: August 2026.
+- A supported management draft covering daily posted totals and signed change, separate pending and disputed amounts, every budget category and its materiality, collected revenue against outstanding balances, and the complete current-month unresolved queue.
+
+Implement these targeted revisions:
+
+1. Add a concise management summary near the top of report.md. State the meeting date, reporting dates, exact five signed figures, principal budget risks, revenue/balance position, and unknown amounts requiring review. Generate every figure and finding from validated live data. Keep detailed calculation evidence in clearly linked sections or appendices.
+2. Make the meeting date an explicit operator input and update the documented command. Keep the reporting date and prior business date configurable. Do not invent a business-day calendar.
+3. Present collected_revenue and outstanding_balance together for each specified date, with their separate signed changes and source evidence. Retain the other revenue metrics. Explain what the snapshots show without calling their difference a collection rate, cash flow, profit, or cumulative revenue unless supported by the business evidence.
+4. Make every budget category’s reconciliation and materiality understandable. Show its allocation, posted MTD amount, signed variance, the relevant 10% boundary, and whether both strict thresholds are exceeded. Explain equality cases. Handle a zero budget baseline without dividing by zero. Preserve source-defined owners and review rules, and keep pending/disputed exposure separate.
+5. Give the current-month transaction unresolved queue its own clearly scoped section. Include every recognized transaction in that month that is pending, disputed, or has an unknown amount. Show transaction ID, date, status, amount or explicit unknown, owner, review reason, and source evidence. State dynamically calculated counts and reconcile them to the normalized data. Distinguish later-dated current-month rows if present. Keep other-period items and nontransaction clarification issues separately visible. Preserve all recognized rows in the CSVs.
+6. Update the operating references with a concise workflow showing source retrieval, validation, calculations, clarification, and human review. Explain the important implementation choices and limitations. Connect published requirements to their supporting implementation and validation evidence.
+
+Preserve the existing safeguards: fresh reads of all three view-only Sheets on every production run, roles identified from field meaning, exact decimal arithmetic, signed credits, explicit unknown states, required CSV columns, relative paths, and safe invalidation of stale outputs after failure.
+
+Before publishing outputs, print the required source identity, tab, fetch timestamp, source versions, and fetched row count. Record identical metadata in the report and ensure the run output is captured.
+
+Add focused verification for the new behavior, including current-month queue completeness across reporting-date boundaries, other-month separation, revenue/balance presentation, meeting date, and materiality boundaries. Run the existing regression suite and independently reconcile the final report against freshly fetched source data. Finish with a successful live run that regenerates all required deliverables.
+
+Measure the actual live run time and record it in the validation notes. Do not invent time savings, stakeholder approval, or learner review. Keep the report a draft for human review.
+
+Commit and push the validated revisions with the capture history. Show the updated command, changes made, validation results, unresolved items, and commit ID. Present the revised management summary for my actual review before I resubmit.
