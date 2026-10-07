@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.11.3",
+  "checkpoint_id": "01M4BX9N5XZR5XQZYG0K8WDPH5",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "README.md",
+    "daily-financial-health-brief/SKILL.md",
+    "daily-financial-health-brief/references/operating-rules.md",
+    "daily-financial-health-brief/references/runtime.md",
+    "daily-financial-health-brief/references/validation.md",
+    "daily-financial-health-brief/scripts/brief.py",
+    "daily-financial-health-brief/scripts/reconcile_live.py",
+    "daily-financial-health-brief/scripts/test_brief.py",
+    "daily-financial-health-brief/scripts/test_reconcile_live.py",
+    "deliverables/report.md",
+    "docs/resubmission.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 350947,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 9928704,
+    "output_tokens": 52602,
+    "api_call_count": 107,
+    "subagent_tokens_complete": false
+  }
+}

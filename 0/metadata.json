@@ -1,0 +1,72 @@
+{
+  "cli_version": "0.11.3",
+  "checkpoint_id": "01M4BX9N5XZR5XQZYG0K8WDPH5",
+  "session_id": "01a11761-440d-7862-8928-ce5db3214385",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-07T19:26:29.424691Z",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "save_step_count": 1,
+  "files_touched": [
+    "README.md",
+    "daily-financial-health-brief/SKILL.md",
+    "daily-financial-health-brief/references/operating-rules.md",
+    "daily-financial-health-brief/references/runtime.md",
+    "daily-financial-health-brief/references/validation.md",
+    "daily-financial-health-brief/scripts/brief.py",
+    "daily-financial-health-brief/scripts/reconcile_live.py",
+    "daily-financial-health-brief/scripts/test_brief.py",
+    "daily-financial-health-brief/scripts/test_reconcile_live.py",
+    "deliverables/report.md",
+    "docs/resubmission.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6.1-sol",
+  "turn_id": "2df379cfcf81",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 350947,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 9928704,
+    "output_tokens": 52602,
+    "api_call_count": 107,
+    "subagent_tokens_complete": false
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-07T19:26:29.294488Z",
+    "agent_lines": 1705,
+    "agent_removed": 223,
+    "human_added": 41,
+    "human_modified": 17,
+    "human_removed": 0,
+    "total_committed": 1763,
+    "total_lines_changed": 1986,
+    "agent_percentage": 97.079556898288,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 88,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".codex/hooks.json": 88
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 88,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1722,
+      "agent_lines_removed": 223,
+      "user_added_per_file": {
+        ".codex/hooks.json": 88
+      }
+    }
+  ]
+}
