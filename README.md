@@ -1,41 +1,98 @@
-# Daily Financial Health Brief — starter
+# Daily Financial Health and Budget Brief
 
-Build a reusable Skill that prepares a source-traceable financial brief for human review.
+Prepare a traceable daily draft from three freshly read, view-only Google Sheets.
+Exact calculations run in Python; the agent explains evidence and unresolved items.
+The operations owner reviews the draft and decides financial actions.
 
-## Start
+## Run the skill
 
-1. Read the [formal assignment](https://private-pecorino-70e.notion.site/Project-A-Daily-Financial-Health-and-Budget-Brief-Learner-assignment-3da0b700541e8137ab79f8cb26d1a827?source=copy_link) for the work and acceptance requirements.
-2. Create your own repository from [this starter](https://github.com/GitRollTraining/financial-health-brief) using **Fork**, then clone your copy and work there.
+Use Python **3.9+** and **curl** on PATH. Python uses only its standard library;
+the public view-only export route needs no credentials, packages or cached inputs.
+Confirm the three source URLs and meeting, reporting and prior business dates first.
+Load [the canonical skill](daily-financial-health-brief/SKILL.md); supported host
+loading and the repository-relative discovery link are described in
+[runtime and access](daily-financial-health-brief/references/runtime.md#load-the-skill).
 
-## Supplied files
+From the repository root, change to `daily-financial-health-brief/`, then run:
 
-| File | Purpose |
-|---|---|
-| `README.md` | Starting instructions and links. |
+```bash
+python3 scripts/brief.py \
+  --sources \
+    'https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8' \
+    'https://docs.google.com/spreadsheets/d/1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4' \
+    'https://docs.google.com/spreadsheets/d/1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4' \
+  --meeting-date 2026-08-12 \
+  --reporting-date 2026-08-11 \
+  --prior-business-date 2026-08-10 \
+  --output ../deliverables
+```
 
-Create the Skill, implementation and outputs described in the formal assignment. This starter supplies no business workflow implementation.
+Inspect visible `SOURCE` records, the process exit status and `report.md` before
+using outputs. A usable run requires a **VALIDATED** report labeled
+**Draft for human review**, matching source metadata and the required CSVs.
+Success does not establish business completeness or stakeholder approval.
+On failure, treat prior artifacts as stale and follow the
+[recovery procedure](daily-financial-health-brief/references/runtime.md#failure-and-recovery).
 
-## Before you work
+| Path | Purpose |
+| --- | --- |
+| `daily-financial-health-brief/SKILL.md` | Agent/operator entry point and review boundaries |
+| `daily-financial-health-brief/scripts/brief.py` | Executable fresh retrieval, validation, calculations and publication |
+| `daily-financial-health-brief/references/operating-rules.md` | Business rules, responsibilities, privacy and source-data boundaries |
+| `daily-financial-health-brief/references/runtime.md` | Full command, loading, source audit and failure recovery |
+| `daily-financial-health-brief/references/validation.md` | Tests, independent reconciliation and historical validation |
+| `deliverables/normalized/{transactions,budget,revenue}.csv` | All recognized business rows, with original source-row provenance |
+| `deliverables/report.md` | Management summary, exact figures, owner queues and evidence |
+| `interviews/*.md` | Complete original interview export for each interview session |
+| `docs/resubmission.md` | This revision's plan, actual decisions, validation and learner review |
 
-**Interview rule.** You conduct the stakeholder interview yourself, and the questions are yours. Do not connect a coding agent or any other AI to the interview to run, script, or automate it. The interview transcript is assessed together with the code; a project whose interview was run by an agent is not scored.
+## Validate and review
 
-- Export your interview as the original Work Sim Markdown, save one final complete file per session under `interviews/`, and commit and push it with your code. Do not rewrite the export. If the export is unavailable, contact the facilitator.
+From the skill root:
 
-- Use an Agent Skills-capable coding environment. Choose and document your implementation runtime and dependencies; no runtime or install command is supplied here.
-- Follow the [shared course guide for session capture](https://classroom.google.com/c/ODcyMjA4NTkwNDk2/m/ODc0NzI2NzQzMzQ2/details) and verify capture is active before implementation. Keep credentials out of the repository.
-- Meet the [stakeholder](https://work-sim.catalyte.ai/s/interview-r62mbg) to understand the work and relevant business sources. Read those online sources through their intended access route; an unavailable source is not permission to substitute repository data.
+```bash
+python3 -m unittest discover -s scripts -p 'test_*.py' -v
+```
 
-## Implemented skill
+Tests use synthetic in-memory data and temporary outputs. Production always reads
+the supplied live URLs again. Follow [validation](daily-financial-health-brief/references/validation.md)
+for independent source reconciliation, deterministic reruns and a controlled
+failure followed by a final successful live run. Review one traced daily figure,
+a signed credit, an unknown amount, a strict threshold and an owner queue entry.
+Learner comments and corrections belong in the revision record; operations-owner
+approval remains a separate responsibility.
 
-Read [daily-financial-health-brief/SKILL.md](daily-financial-health-brief/SKILL.md)
-to run the read-only workflow. The [runtime instructions](daily-financial-health-brief/references/runtime.md)
-include the complete live-source command, Python 3.9+/curl dependencies, access
-contract and failure behavior. [Operating rules](daily-financial-health-brief/references/operating-rules.md)
-document source meanings and calculations; [validation](daily-financial-health-brief/references/validation.md)
-describes the regression suite. Required outputs are under `deliverables/`.
+## Recording and original evidence
 
-The original complete interview export is preserved under `interviews/`.
-Current capture uses Entire 0.11.3 checkpoint refs under `refs/entire/checkpoints/`,
-which differ from the course guide's `entire/checkpoints/v1` branch; capture
-configuration and existing history have been preserved. Financial reports remain
-drafts for operations-owner review.
+Before implementation in each chat, run `pwd`, `git rev-parse --show-toplevel`,
+`entire version` and `entire agent-help`. Use the installed help and
+`entire session current --json`, `entire status --json` and `entire doctor` to
+identify the actual caller's session, capture hooks, checkpoint backend and sync
+destination; the [runtime capture procedure](daily-financial-health-brief/references/runtime.md#recording-and-publication-evidence)
+gives the complete inspection steps. Inspect the current transcript with
+`entire session info <current-session-id> --transcript`: verify the user's request,
+an actual tool-output marker and a completed response. A command containing a
+marker, or an enabled configuration alone, does not prove recorded output.
+
+This installation uses Entire 0.11.3 checkpoint refs under
+`refs/entire/checkpoints/`. The course guide's legacy `entire/checkpoints/v1` branch
+is a different format. Preserve the installed configuration, Git history and
+checkpoint refs; use installed help for supported sync and remote inspection.
+After committing with normal hooks, verify linkage to the current recorded session
+and verify both code and capture data remotely. Facilitator access to the modern
+format may require clarification; an empty legacy branch provides no capture evidence.
+The [course capture guide](https://classroom.google.com/c/ODcyMjA4NTkwNDk2/m/ODc0NzI2NzQzMzQ2/details)
+is the course reference.
+
+The learner conducts the stakeholder interview personally, with their own
+questions. Agents may read the supplied export but must not access, run, script or
+automate the Work Sim interview. Preserve one final complete original Markdown
+export per session under `interviews/`; do not rewrite it. If an export is unavailable,
+contact the facilitator. Keep credentials and unrelated personal information out
+of source-review context, the repository and capture; see the
+[privacy procedure](daily-financial-health-brief/references/operating-rules.md#privacy-and-source-data-boundaries).
+
+The [formal assignment](https://private-pecorino-70e.notion.site/Project-A-Daily-Financial-Health-and-Budget-Brief-Learner-assignment-3da0b700541e8137ab79f8cb26d1a827)
+and [starter repository](https://github.com/GitRollTraining/financial-health-brief)
+provide course requirements. The canonical assignment package in this repository
+contains the implementation.

@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, localcontext
@@ -259,15 +260,40 @@ def select_total(rows, wanted_status):
 def evidence(row):
     label = row.get("transaction_id", row.get("category", row.get("metric", "row")))
     # Tab name + spreadsheet identity + physical row is stable evidence within this fetched snapshot.
-    return f"{label} ({sheet_identity(row['source_url'])}/{row['source_tab']} row {row['source_row']}; {row['source_version']})"
+    return SafeText(f"{data_text(label)} ({sheet_identity(row['source_url'])}/{data_text(row['source_tab'])} "
+                    f"row {data_text(row['source_row'])}; {data_text(row['source_version'])})")
 
 
 def refs(rows):
-    return "; ".join(evidence(r) for r in rows) or "No matching rows"
+    return SafeText("; ".join(evidence(r) for r in rows) or "No matching rows")
+
+
+class SafeText(str):
+    """Report text constructed from trusted prose and already protected source parts."""
+
+
+def data_text(value):
+    """Render source text as literal data, keeping ordinary business fields readable.
+
+    A JSON string makes control characters visible without changing the CSV value.
+    Markdown code spans protect markup; an encoded pipe cannot split a table cell.
+    The delimiter exceeds every source backtick run, so source text cannot close it.
+    """
+    if isinstance(value, SafeText):
+        return value
+    text = str(value)
+    dangerous = (bool(re.search(r"[\\`*#~|<>\[\]&]", text)) or
+                 bool(re.search(r"(?:^|\W)_|_(?:$|\W)", text)) or
+                 any(unicodedata.category(char) in {"Cc", "Cf", "Zl", "Zp"} for char in text))
+    if not dangerous:
+        return SafeText(text)
+    literal = json.dumps(text, ensure_ascii=True).replace("|", "\\u007c")
+    delimiter = "`" * (max((len(run) for run in re.findall(r"`+", literal)), default=0) + 1)
+    return SafeText(delimiter + literal + delimiter)
 
 
 def escape(value):
-    return str(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+    return data_text(value)
 
 
 def table(headers, rows):
@@ -314,26 +340,26 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
                             "yes" if abs(variance) > Decimal("500") else "no",
                             signed(headroom), signed(q), signed(d), "yes" if is_material else "no", b["review_rule"]))
         if is_material:
-            material_findings.append(f"{category}: MTD posted minus monthly budget = USD {signed(variance)}; "
+            material_findings.append(f"{data_text(category)}: MTD posted minus monthly budget = USD {signed(variance)}; "
                                      f"baseline USD {signed(baseline)}, 10% boundary USD {signed_boundary(baseline * Decimal('0.10'))}. "
                                      f"{'Overage' if variance > ZERO else 'Below full monthly allocation; not a forecast or savings decision'}. "
-                                     f"Owner: {b['owner']}. Evidence: {evidence(b)}; {refs([r for r in rows if status(r) == 'posted' and r['amount_status'] == 'confirmed'])}.")
+                                     f"Owner: {data_text(b['owner'])}. Evidence: {evidence(b)}; {refs([r for r in rows if status(r) == 'posted' and r['amount_status'] == 'confirmed'])}.")
         if variance > ZERO:
-            risks.append(f"{category}: posted spend exceeds allocation by USD {signed(variance)}; "
-                         f"{'material overage review required' if is_material and b['review_rule'] == 'review_material_overage' else 'below material overage trigger or governed by separate source rule'}. Owner: {b['owner']}.")
+            risks.append(f"{data_text(category)}: posted spend exceeds allocation by USD {signed(variance)}; "
+                         f"{'material overage review required' if is_material and b['review_rule'] == 'review_material_overage' else 'below material overage trigger or governed by separate source rule'}. Owner: {data_text(b['owner'])}.")
         elif p + q > baseline:
-            risks.append(f"{category}: confirmed pending exposure could exceed remaining headroom (posted + pending = USD {signed(p + q)} "
-                         f"vs allocation USD {signed(baseline)}). This is exposure, not posted spend. Owner: {b['owner']}.")
+            risks.append(f"{data_text(category)}: confirmed pending exposure could exceed remaining headroom (posted + pending = USD {signed(p + q)} "
+                         f"vs allocation USD {signed(baseline)}). This is exposure, not posted spend. Owner: {data_text(b['owner'])}.")
         if d:
-            risks.append(f"{category}: USD {signed(d)} disputed-confirmed MTD exposure remains separate; no outcome assumed. Owner: {b['owner']}.")
+            risks.append(f"{data_text(category)}: USD {signed(d)} disputed-confirmed MTD exposure remains separate; no outcome assumed. Owner: {data_text(b['owner'])}.")
         if b["review_rule"] == "review_material_overage" and variance > ZERO and is_material:
-            queue.append((f"Material overage: {category}", b["owner"], "Review budget breach and recommend action for operations-owner decision", evidence(b)))
+            queue.append((SafeText(f"Material overage: {data_text(category)}"), b["owner"], "Review budget breach and recommend action for operations-owner decision", evidence(b)))
         if not rows:
-            risks.append(f"{category}: no ledger rows observed for MTD; observed total is USD +0.00, not proof of completeness. Owner: {b['owner']}.")
+            risks.append(f"{data_text(category)}: no ledger rows observed for MTD; observed total is USD +0.00, not proof of completeness. Owner: {data_text(b['owner'])}.")
     out += ["", table(["Category", "Owner", "Budget USD", "Posted MTD USD", "Posted − budget USD", "10% boundary USD", "Abs variance > 10%?", "Abs variance > USD 500?", "Headroom USD", "Pending-confirmed MTD USD", "Disputed-confirmed MTD USD", "Material variance", "Source review rule"], comparisons),
             "", "### Budget calculation evidence", ""]
     for category, b in sorted(active_budgets.items()):
-        out.append(f"- {category}: budget {evidence(b)}; posted MTD contributors: {refs([r for r in mtd if r['category'] == category and status(r) == 'posted' and r['amount_status'] == 'confirmed'])}.")
+        out.append(f"- {data_text(category)}: budget {evidence(b)}; posted MTD contributors: {refs([r for r in mtd if r['category'] == category and status(r) == 'posted' and r['amount_status'] == 'confirmed'])}.")
     out += ["", "## Material variances", ""] + ["- " + f for f in material_findings]
     if not material_findings:
         out.append("No budget variance meets both strict materiality boundaries.")
@@ -350,7 +376,7 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
         revenue_rows.append((key[0], key[1], key[2] or "source-defined count/unit", signed(a, cash), signed(b, cash), signed(b - a, cash),
                              refs([before, after])))
         if key[1] == "collected_revenue":
-            queue.append(("Collected revenue interpretation", key[0] + " source owner",
+            queue.append(("Collected revenue interpretation", SafeText(f"{data_text(key[0])} source owner"),
                           "Daily-flow versus cumulative meaning was not established; comparisons are snapshot-only until clarified", refs([before, after])))
     paired = []
     positions = []
@@ -365,7 +391,7 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
                            signed(number(balance_row["value"]), key[2] == "USD"), refs([collected_row, balance_row])))
         c0, c1 = (number(snapshots[day][key]["value"]) for day in (prior_date, reporting_date))
         b0, b1 = (number(snapshots[day][balance_key]["value"]) for day in (prior_date, reporting_date))
-        positions.append(f"{key[0]}: collected revenue {key[2] or 'source-defined unit'} {signed(c0, key[2] == 'USD')} → {signed(c1, key[2] == 'USD')} (change {signed(c1-c0, key[2] == 'USD')}); "
+        positions.append(f"{data_text(key[0])}: collected revenue {key[2] or 'source-defined unit'} {signed(c0, key[2] == 'USD')} → {signed(c1, key[2] == 'USD')} (change {signed(c1-c0, key[2] == 'USD')}); "
                          f"outstanding balance {key[2] or 'source-defined unit'} {signed(b0, key[2] == 'USD')} → {signed(b1, key[2] == 'USD')} (change {signed(b1-b0, key[2] == 'USD')}).")
     out += [table(["Date", "Source", "Unit", "Collected revenue", "Outstanding balance", "Evidence"], paired), "",
             table(["Source", "Metric", "Unit", prior_date, reporting_date, "Reporting − prior", "Evidence"], revenue_rows), "",
@@ -388,14 +414,16 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
             if status(r) in {"pending", "disputed"} and any(b["review_rule"] == "review_all_pending_or_disputed" for b in matching):
                 reason += "; mandatory pending/disputed review per source rule regardless of amount"
             scope = "Later-dated current-month; excluded from MTD" if r["date"][:7] == period and r["date"] > reporting_date else ("Within reporting MTD" if r["date"][:7] == period else "Other period; excluded from reporting MTD")
-            values.append((r["transaction_id"], r["date"], status(r), "unknown" if r["amount_status"] == "unknown" else signed(number(r["amount"])), owner, reason, scope, evidence(r) + "; owner/rule: " + refs(matching)))
-        return table(["Transaction ID", "Date", "Status", "Amount USD", "Owner", "Review reason", "Timing", "Evidence"], values) if values else "None observed in fetched data."
+            values.append((r["transaction_id"], r["date"], r["category"], r["description"], status(r), "unknown" if r["amount_status"] == "unknown" else signed(number(r["amount"])), owner, reason, scope, SafeText(evidence(r) + "; owner/rule: " + refs(matching))))
+        return table(["Transaction ID", "Date", "Category", "Description", "Status", "Amount USD", "Owner", "Review reason", "Timing", "Evidence"], values) if values else "None observed in fetched data."
     out += ["## Current-month transaction unresolved queue", "",
             f"Scope: every recognized {period} transaction that is pending, disputed, or has an unknown amount, including dates after {reporting_date}. Each transaction appears once.", "",
             f"Reconciliation to normalized transactions.csv: {len(month_rows)} current-month rows = {len(month_rows)-len(month_queue)} confirmed posted rows + {len(month_queue)} unresolved rows. "
             f"Unresolved status counts: {counts['pending']} pending + {counts['disputed']} disputed + {counts['posted']} posted with unknown amount = {len(month_queue)}. "
             f"Amount states: {len(month_queue)-len(unknown)} known + {len(unknown)} unknown = {len(month_queue)}; unknown is an overlapping amount state, not an additional transaction. "
-            f"Later-dated current-month unresolved rows: {len(later)}; on/before reporting date: {len(month_queue)-len(later)}.", "", queue_table(month_queue), "",
+            f"Later-dated current-month unresolved rows: {len(later)}; on/before reporting date: {len(month_queue)-len(later)}.", "",
+            "### On or before the reporting date", "", queue_table([r for r in month_queue if r["date"] <= reporting_date]), "",
+            "### Later-dated current-month items", "", queue_table(later), "",
             "## Other-period transaction unresolved items", "", f"{len(other_queue)} rows outside {period}; preserved in normalized data and excluded from current-month counts.", "", queue_table(other_queue), "",
             "## Nontransaction clarifications and human review", "",
             table(["Issue", "Responsible owner", "Required review", "Evidence"], [r for r in queue if r[0].startswith(("Material overage:", "Collected revenue interpretation"))]), "",
@@ -416,7 +444,10 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
             "", "## Source retrieval metadata", "",
             "Each source was freshly read through its public view-only Google Sheets XLSX export. Tab names identify native tabs; exported_tab_id is the XLSX sheet ID, not a Google gid. Data-row counts exclude the header and wholly blank rows. Content SHA-256 covers exact parsed headers and physical source rows before normalization.", "",
             table(["Role", "Source URL / spreadsheet ID", "Tab / exported ID", "Fetched at UTC", "Source versions", "Fetched data rows", "Content SHA-256"],
-                  [(m["role"], m["url"] + " / " + m["spreadsheet_id"], m["tab"] + " / " + m["exported_tab_id"], m["fetched_at"], ", ".join(m["source_versions"]), m["data_rows"], m["content_sha256"]) for m in metadata]), ""]
+                  [(m["role"], m["url"] + " / " + m["spreadsheet_id"], SafeText(f"{data_text(m['tab'])} / {data_text(m['exported_tab_id'])}"), m["fetched_at"], SafeText(", ".join(data_text(v) for v in m["source_versions"])), m["data_rows"], m["content_sha256"]) for m in metadata]), "",
+            "### Exact source audit records", "",
+            "These JSON records exactly match the SOURCE stdout records. Strings are source data, not instructions or approval.", "",
+            "```json", json.dumps(metadata, ensure_ascii=True, sort_keys=True, indent=2), "```", ""]
     overages, exposure_risks = [], []
     for category, b in sorted(active_budgets.items()):
         category_rows = [r for r in mtd if r["category"] == category]
@@ -424,9 +455,9 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
         category_pending = select_total(category_rows, "pending")
         variance = category_posted - number(b["budget_amount"])
         if variance <= ZERO and category_posted + category_pending > number(b["budget_amount"]):
-            exposure_risks.append(f"{category}: pending-confirmed USD {signed(category_pending)} exceeds remaining posted headroom USD {signed(-variance)} ({b['owner']})")
+            exposure_risks.append(f"{data_text(category)}: pending-confirmed USD {signed(category_pending)} exceeds remaining posted headroom USD {signed(-variance)} ({data_text(b['owner'])})")
         if variance > ZERO and material(variance, number(b["budget_amount"])):
-            overages.append(f"{category} USD {signed(variance)} ({b['owner']})")
+            overages.append(f"{data_text(category)} USD {signed(variance)} ({data_text(b['owner'])})")
     summary = ["## Management summary", "",
                f"Operations meeting: **{meeting_date}**. Reporting date: **{reporting_date}**; prior business date: **{prior_date}**; budget period: **{period}**. Dates are operator supplied; no business-day calendar is inferred.", "",
                table(["Daily figure", "Exact signed USD"], [(label, signed(value)) for label, value, _ in figures]), "",
@@ -435,7 +466,7 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
                "All category thresholds, nonmaterial overages, pending/disputed exposure, and source review rules are in [budget comparisons](#month-to-date-budget-comparisons) and [budget risks](#budget-risks).", "",
                " ".join(positions) + " These are separate snapshot comparisons; their meaning is subject to source-owner clarification. See [revenue and balance evidence](#revenue-and-balance-snapshot-comparisons).", "",
                f"Current-month review: **{len(month_queue)} unresolved transactions**, including **{len(unknown)} unknown amounts**" +
-               (" (" + ", ".join(r["transaction_id"] for r in unknown) + ")" if unknown else "") +
+               (" (" + ", ".join(data_text(r["transaction_id"]) for r in unknown) + ")" if unknown else "") +
                f"; {len(later)} are later than the reporting date. Unknowns are excluded from numeric totals; owners must obtain their amounts. See the [complete current-month queue](#current-month-transaction-unresolved-queue).", "",
                "Operations owner: review spending changes, owner escalations, disputed outcomes, and proposed actions before use. This draft records no stakeholder approval. "
                "[Daily calculation evidence](#five-required-figures), [definitions](#calculation-definitions-and-limitations), and [fresh source metadata](#source-retrieval-metadata) support review.", ""]
@@ -444,23 +475,62 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
 
 
 def invalidate(output, reason):
+    if output.is_symlink():
+        raise OSError("Output directory is a symlink; stop use and quarantine the output path without changing its target")
     output.mkdir(parents=True, exist_ok=True)
     # Mark every earlier artifact stale before any cleanup can fail.
-    (output / "report.md").write_text("# STALE / FAILED — no usable financial brief\n\n" + reason + "\n\nRecorded at UTC: " + utc_now() + "\n", encoding="utf-8")
+    report_path = output / "report.md"
+    marker = "# STALE / FAILED — no usable financial brief\n\n" + data_text(reason) + "\n\nRecorded at UTC: " + utc_now() + "\n"
     errors = []
-    for role in SCHEMAS:
-        path = output / "normalized" / (role + ".csv")
-        if path.exists():
+    report_state = "Report marked STALE / FAILED"
+    try:
+        # Unlink the reference itself; never overwrite a report outside this output.
+        if report_path.is_symlink():
+            report_path.unlink()
+        report_path.write_text(marker, encoding="utf-8")
+    except OSError as exc:
+        errors.append(f"Cannot write stale marker: {exc}")
+        alternate = None
+        try:
+            # Replacing a file can work when its existing permissions deny overwrite.
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", prefix=".brief-failure-", dir=output, delete=False) as f:
+                alternate = Path(f.name)
+                f.write(marker)
+            os.replace(alternate, report_path)
+        except OSError as replacement_error:
+            errors.append(f"Cannot replace stale marker: {replacement_error}")
             try:
-                path.unlink()
-            except OSError as exc:
-                errors.append(f"Cannot remove stale {path}: {exc}")
+                report_path.unlink(missing_ok=True)
+                report_state = "Earlier report removed"
+            except OSError as removal_error:
+                report_state = "Unable to invalidate earlier report; stop use and quarantine the output directory"
+                errors.append(f"Cannot remove earlier report: {removal_error}")
+        finally:
+            if alternate is not None and alternate.exists():
+                try:
+                    alternate.unlink()
+                except OSError as cleanup_error:
+                    errors.append(f"Cannot remove temporary failure marker: {cleanup_error}")
+    normalized = output / "normalized"
+    if normalized.is_symlink():
+        errors.append("Normalized directory is a symlink; its external target was not changed. Replace the link with an operator-approved local directory before rerunning")
+    else:
+        for role in SCHEMAS:
+            path = normalized / (role + ".csv")
+            if path.exists() or path.is_symlink():
+                try:
+                    # Individual CSV links are removed, without following targets.
+                    path.unlink()
+                except OSError as exc:
+                    errors.append(f"Cannot remove stale {path}: {exc}")
     if errors:
-        raise OSError("Report marked STALE / FAILED; cleanup incomplete: " + "; ".join(errors))
+        raise OSError(report_state + "; cleanup incomplete; run stopped: " + "; ".join(errors))
 
 
 def publish(output, data, report):
     # Report validity is published last. An interruption before then leaves STALE/FAILED.
+    if output.is_symlink() or (output / "normalized").is_symlink():
+        raise OSError("Publication destination became a symlink; stop use and quarantine the output path")
     (output / "normalized").mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".brief-", dir=output) as staging:
         staging = Path(staging)
@@ -527,7 +597,7 @@ def main():
     try:
         run(args.sources, args.reporting_date, args.prior_business_date, args.output, meeting_date=args.meeting_date)
     except (ValidationError, OSError, ET.ParseError, InvalidOperation) as exc:
-        print(f"FAILED: {exc}. Check the destination's failure marker; cleanup errors require operator attention.", file=sys.stderr)
+        print(f"FAILED: {json.dumps(str(exc), ensure_ascii=True)}. Check the destination's failure marker; cleanup errors require operator attention.", file=sys.stderr)
         return 1
     return 0
 

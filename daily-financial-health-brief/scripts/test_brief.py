@@ -4,6 +4,7 @@ import copy
 import csv
 import io
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -117,6 +118,14 @@ class BriefTests(unittest.TestCase):
         self.assertNotIn("| OLD |", section)
         self.assertIn("| OLD |", report.split("## Other-period transaction unresolved items")[1])
         self.assertEqual(len(self.read_csv("transactions")), 10)
+        before, later = section.split("### Later-dated current-month items")
+        self.assertIn("### On or before the reporting date", before)
+        self.assertIn("| EARLIER |", before)
+        self.assertNotIn("| FUTURE |", before)
+        self.assertIn("| FUTURE |", later)
+        self.assertNotIn("| EARLIER |", later)
+        self.assertIn("| Category | Description |", section)
+        self.assertIn("| supplies | unknown |", section)
 
     def test_meeting_summary_and_paired_snapshots(self):
         self.successful_run()
@@ -152,6 +161,8 @@ class BriefTests(unittest.TestCase):
             for record in records:
                 expected = [record["role"], record["url"] + " / " + record["spreadsheet_id"], record["tab"] + " / " + record["exported_tab_id"], record["fetched_at"], ", ".join(record["source_versions"]), record["data_rows"], record["content_sha256"]]
                 self.assertIn("| " + " | ".join(map(str, expected)) + " |", report)
+            audit_block = report.split("### Exact source audit records\n", 1)[1].split("```json\n", 1)[1].split("\n```", 1)[0]
+            self.assertEqual(json.loads(audit_block), records)
             original_publish(output, data, report)
         with contextlib.redirect_stdout(stream), patch.object(brief, "publish", side_effect=verify_publish):
             brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="2026-08-15")
@@ -209,6 +220,90 @@ class BriefTests(unittest.TestCase):
             brief.run(URLS, DAY, PRIOR, self.output, fail, meeting_date="2026-08-12")
         self.assert_invalidated()
 
+    def test_source_newline_heading_remains_literal_and_csv_exact(self):
+        source = "billing\n\n## SOURCE_TEXT_SHOULD_STAY_DATA"
+        for _, row in self.tabs[2].rows:
+            row[1] = source
+        _, stdout = self.successful_run()
+        self.assertTrue(all(r["source"] == source for r in self.read_csv("revenue")))
+        report = (self.output / "report.md").read_text()
+        self.assertNotRegex(report, r"(?m)^## SOURCE_TEXT_SHOULD_STAY_DATA")
+        self.assertIn('`"billing\\n\\n## SOURCE_TEXT_SHOULD_STAY_DATA"`', report)
+        self.assertIn("## Management summary\n", report)
+        self.assertIn("| Reporting-date posted total | +150.15 |", report)
+        self.assertIn("Run status: **VALIDATED**", report)
+        records = [json.loads(line[7:]) for line in stdout.splitlines() if line.startswith("SOURCE ")]
+        audit_block = report.split("### Exact source audit records\n", 1)[1].split("```json\n", 1)[1].split("\n```", 1)[0]
+        self.assertEqual(json.loads(audit_block), records)
+
+    def test_source_markup_controls_all_rendering_contexts(self):
+        source = ("business\n\n## SOURCE_HEADING\n\nRun status: **VALIDATED**\n"
+                  "**APPROVED** [approval](https://invalid.example) | <h2>APPROVAL</h2> "
+                  "` `` ``` &amp; _approval_ \\ \r\t\u202e\u2028data")
+        # Make overage prose, risk prose, evidence, summary, cells and audit metadata
+        # exercise the same untrusted characters without changing their CSV values.
+        self.tabs[1].rows[0][1][2] = "0"
+        self.tabs[1].rows[0][1][5] = "review_material_overage"
+        self.tabs[0].rows[3][1][5] = "800.20"
+        self.tabs[1].rows[0][1][1] = source
+        self.tabs[1].rows[0][1][4] = source
+        self.tabs[1].rows[0][1][6] = source
+        for tab in self.tabs:
+            tab.title = source
+            version_column = tab.headers.index("source_version")
+            for _, row in tab.rows:
+                row[version_column] = source
+        for _, row in self.tabs[0].rows:
+            row[2] = row[3] = row[4] = row[8] = source
+        self.tabs[0].rows[7][1][0] = source
+        for _, row in self.tabs[2].rows:
+            row[1] = source
+        self.successful_run()
+        transactions, budgets, revenue = (self.read_csv(role) for role in brief.SCHEMAS)
+        for row in transactions:
+            for field in ("account", "category", "description", "source", "source_version", "source_tab"):
+                self.assertEqual(row[field], source)
+        self.assertEqual(next(r for r in transactions if r["amount_status"] == "unknown")["transaction_id"], source)
+        for field in ("category", "owner", "source", "source_version", "source_tab"):
+            self.assertEqual(budgets[0][field], source)
+        self.assertTrue(all(r["source"] == source and r["source_version"] == source and r["source_tab"] == source for r in revenue))
+        report = (self.output / "report.md").read_text()
+        headings = re.findall(r"(?m)^#{1,6} .*", report)
+        self.assertNotIn("## SOURCE_HEADING", headings)
+        self.assertEqual(sum(line.startswith("Run status: **VALIDATED**") for line in report.splitlines()), 1)
+        self.assertNotIn("\u202e", report)
+        self.assertNotIn("\u2028", report)
+        self.assertIn("| Reporting-date posted total | +750.15 |", report)
+        self.assertIn("**Draft for human review**", report)
+        # Code-span JSON is reversible, has no literal table delimiter or newline,
+        # and no source backtick run can close the chosen delimiter.
+        rendered = brief.data_text(source)
+        delimiter = rendered[:len(rendered) - len(rendered.lstrip("`"))]
+        literal = rendered[len(delimiter):-len(delimiter)]
+        self.assertEqual(json.loads(literal), source)
+        self.assertNotIn("|", literal)
+        self.assertNotIn("\n", literal)
+        self.assertGreater(len(delimiter), max(map(len, re.findall(r"`+", literal))))
+        block = report.split("### Exact source audit records\n", 1)[1].split("```json\n", 1)[1].split("\n```", 1)[0]
+        self.assertTrue(all(m["tab"] == source and m["source_versions"] == [source] for m in json.loads(block)))
+
+    def test_failed_source_text_cannot_forge_status_or_approval(self):
+        self.successful_run()
+        self.tabs[1].rows[0][1][5] = "review\n\nRun status: **VALIDATED**\n\n## SOURCE_APPROVAL\u202e"
+        with self.assertRaisesRegex(brief.ValidationError, "Unsupported review_rule"):
+            self.successful_run()
+        self.assert_invalidated()
+        report = (self.output / "report.md").read_text()
+        self.assertNotRegex(report, r"(?m)^Run status: \*\*VALIDATED\*\*|^## SOURCE_APPROVAL")
+        self.assertTrue(report.startswith("# STALE / FAILED"))
+        stderr = io.StringIO()
+        argv = ["brief.py", "--sources", *URLS, "--meeting-date", "2026-08-12", "--reporting-date", DAY, "--prior-business-date", PRIOR, "--output", str(self.output)]
+        with patch.object(sys, "argv", argv), patch.object(brief, "fetch_workbook", fake_fetch(self.tabs)), contextlib.redirect_stderr(stderr):
+            self.assertEqual(brief.main(), 1)
+        self.assertEqual(stderr.getvalue().count("\n"), 1)
+        self.assertNotIn("\u202e", stderr.getvalue())
+        self.assertIn("\\u202e", stderr.getvalue())
+
     def test_bad_data_after_success_invalidates(self):
         changes = [lambda tabs: tabs[0].rows[0][1].__setitem__(5, "not money"),
                    lambda tabs: tabs[0].rows[0][1].__setitem__(5, "1.001"),
@@ -248,6 +343,95 @@ class BriefTests(unittest.TestCase):
         self.assertIn("STALE / FAILED", (self.output / "report.md").read_text())
         self.assertNotIn("VALIDATED", (self.output / "report.md").read_text())
 
+    def test_marker_write_failure_replaces_old_valid_report_and_stops(self):
+        self.successful_run()
+        with patch.object(Path, "write_text", side_effect=PermissionError("Synthetic marker overwrite denied")):
+            with self.assertRaisesRegex(OSError, "Cannot write stale marker.*run stopped|run stopped.*Cannot write stale marker"):
+                self.successful_run()
+        self.assert_invalidated()
+        self.assertFalse(list(self.output.glob(".brief-failure-*")))
+
+    def test_marker_and_replacement_failure_remove_old_report(self):
+        self.successful_run()
+        with patch.object(Path, "write_text", side_effect=PermissionError("Synthetic marker overwrite denied")), \
+                patch.object(brief.os, "replace", side_effect=PermissionError("Synthetic replacement denied")):
+            with self.assertRaisesRegex(OSError, "Earlier report removed"):
+                self.successful_run()
+        self.assertFalse((self.output / "report.md").exists())
+        self.assertTrue(all(not (self.output / "normalized" / (role + ".csv")).exists() for role in brief.SCHEMAS))
+        self.assertFalse(list(self.output.glob(".brief-failure-*")))
+
+    def test_total_storage_denial_requires_explicit_quarantine(self):
+        self.successful_run()
+        with patch.object(Path, "write_text", side_effect=PermissionError("Synthetic overwrite denied")), \
+                patch.object(brief.os, "replace", side_effect=PermissionError("Synthetic replacement denied")), \
+                patch.object(Path, "unlink", side_effect=PermissionError("Synthetic removal denied")):
+            with self.assertRaisesRegex(OSError, "Unable to invalidate earlier report; stop use and quarantine"):
+                self.successful_run()
+        # Storage denied every permitted mutation; this limitation is reported,
+        # rather than declaring the untouched earlier artifacts safe or current.
+        self.assertIn("Run status: **VALIDATED**", (self.output / "report.md").read_text())
+
+    def test_output_symlinks_preserve_external_targets(self):
+        external = Path(self.temporary.name) / "external"
+        external.mkdir()
+        report_target = external / "report-original.md"
+        report_target.write_text("External evidence must remain unchanged")
+        self.output.mkdir()
+        (self.output / "report.md").symlink_to(report_target)
+        brief.invalidate(self.output, "Synthetic local invalidation")
+        self.assertEqual(report_target.read_text(), "External evidence must remain unchanged")
+        self.assertFalse((self.output / "report.md").is_symlink())
+        self.assert_invalidated()
+        # The normalized-directory link must not redirect unlink or publication.
+        external_csv = external / "transactions.csv"
+        external_csv.write_text("External transaction evidence")
+        (self.output / "normalized").symlink_to(external, target_is_directory=True)
+        with self.assertRaisesRegex(OSError, "Normalized directory is a symlink.*external target was not changed"):
+            brief.invalidate(self.output, "Synthetic linked normalization")
+        self.assertEqual(external_csv.read_text(), "External transaction evidence")
+        self.assertIn("STALE / FAILED", (self.output / "report.md").read_text())
+        data, _ = brief.normalize(self.tabs)
+        with self.assertRaisesRegex(OSError, "destination became a symlink"):
+            brief.publish(self.output, data, "Must not publish")
+        self.assertEqual(external_csv.read_text(), "External transaction evidence")
+        root_link = Path(self.temporary.name) / "linked-output"
+        root_link.symlink_to(external, target_is_directory=True)
+        with self.assertRaisesRegex(OSError, "Output directory is a symlink; stop use and quarantine"):
+            brief.run(URLS, DAY, PRIOR, root_link, fake_fetch(self.tabs), meeting_date="2026-08-12")
+        self.assertEqual(report_target.read_text(), "External evidence must remain unchanged")
+        self.assertEqual(external_csv.read_text(), "External transaction evidence")
+
+    def test_individual_csv_symlink_is_removed_without_changing_target(self):
+        self.successful_run()
+        external = Path(self.temporary.name) / "external-transaction-evidence.csv"
+        external.write_text("Preserve this external file")
+        transaction_path = self.output / "normalized" / "transactions.csv"
+        transaction_path.unlink()
+        transaction_path.symlink_to(external)
+        brief.invalidate(self.output, "Synthetic CSV reference")
+        self.assert_invalidated()
+        self.assertFalse(transaction_path.is_symlink())
+        self.assertEqual(external.read_text(), "Preserve this external file")
+
+    def test_multitab_sparse_rows_preserved_and_populated_unknown_tab_rejected(self):
+        additional = copy.deepcopy(self.tabs[0])
+        additional.title, additional.tab_id = "Budget title on a hidden source tab", "7"
+        additional.rows = [(17, ["SECOND-TAB", "2026-09-01", "a", "supplies", "other period", "-1.01", "USD", "posted", "ledger", "v3", "confirmed", "kept"])]
+        self.tabs.append(additional)
+        result, stdout = self.successful_run()
+        self.assertEqual(result["preserved_rows"]["transactions"], 11)
+        row = next(r for r in self.read_csv("transactions") if r["transaction_id"] == "SECOND-TAB")
+        self.assertEqual((row["amount"], row["business_note"], row["source_tab"], row["source_row"]), ("-1.01", "kept", additional.title, "17"))
+        records = [json.loads(line[7:]) for line in stdout.splitlines() if line.startswith("SOURCE ")]
+        self.assertEqual(len(records), 4)
+        extra_audit = next(m for m in records if m["tab"] == additional.title)
+        self.assertEqual((extra_audit["exported_tab_id"], extra_audit["data_rows"], extra_audit["source_versions"]), ("7", 1, ["v3"]))
+        self.tabs.append(brief.Tab(URLS[1], "fixture_1", "Populated unsupported tab", "8", "now", ["notes"], [(3, ["must not ignore"])]))
+        with self.assertRaisesRegex(brief.ValidationError, "Unrecognized/ambiguous"):
+            self.successful_run()
+        self.assert_invalidated()
+
     def test_cli_invalid_dates_and_arguments_invalidate(self):
         for extra in [["--sources", *URLS, "--meeting-date", "2026-08-12", "--reporting-date", "bad", "--prior-business-date", PRIOR], []]:
             self.successful_run()
@@ -268,15 +452,18 @@ class BriefTests(unittest.TestCase):
         payload = io.BytesIO()
         ns = brief.NS["s"]
         with ZipFile(payload, "w") as z:
-            z.writestr("xl/workbook.xml", f'<workbook xmlns="{ns}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Misleading" sheetId="7" r:id="x"/></sheets></workbook>')
-            z.writestr("xl/_rels/workbook.xml.rels", '<Relationships><Relationship Id="x" Target="worksheets/sheet1.xml"/></Relationships>')
+            z.writestr("xl/workbook.xml", f'<workbook xmlns="{ns}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Misleading" sheetId="7" r:id="x"/><sheet name="Hidden secondary tab" sheetId="9" state="hidden" r:id="y"/></sheets></workbook>')
+            z.writestr("xl/_rels/workbook.xml.rels", '<Relationships><Relationship Id="x" Target="worksheets/sheet1.xml"/><Relationship Id="y" Target="worksheets/sheet2.xml"/></Relationships>')
             z.writestr("xl/styles.xml", f'<styleSheet xmlns="{ns}"><cellXfs><xf numFmtId="0"/><xf numFmtId="14"/></cellXfs></styleSheet>')
             z.writestr("xl/sharedStrings.xml", f'<sst xmlns="{ns}"><si><t>date</t></si><si><t>amount</t></si></sst>')
             z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{ns}"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row r="3"><c r="A3" s="1"><v>46245</v></c><c r="B3"><v>-0.10</v></c></row><row r="4"><c r="A4"/></row></sheetData></worksheet>')
+            z.writestr("xl/worksheets/sheet2.xml", f'<worksheet xmlns="{ns}"><sheetData><row r="5"><c r="A5" t="s"><v>0</v></c><c r="B5" t="s"><v>1</v></c></row><row r="21"><c r="A21" s="1"><v>46245</v></c><c r="B21"><v>-1.01</v></c></row></sheetData></worksheet>')
         tabs = brief.parse_workbook(payload.getvalue(), URLS[0], "fixture_0", "now")
         self.assertEqual(tabs[0].tab_id, "7")
         self.assertEqual(tabs[0].rows, [(3, [DAY, "-0.10"])])
         self.assertEqual(tabs[0].headers, ["date", "amount"])
+        self.assertEqual(len(tabs), 2)
+        self.assertEqual((tabs[1].title, tabs[1].tab_id, tabs[1].rows), ("Hidden secondary tab", "9", [(21, [DAY, "-1.01"])]))
         bad = io.BytesIO()
         with ZipFile(payload) as original, ZipFile(bad, "w") as changed:
             for filename in original.namelist():

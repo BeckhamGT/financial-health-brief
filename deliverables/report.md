@@ -113,26 +113,32 @@ Scope: every recognized 2026-08 transaction that is pending, disputed, or has an
 
 Reconciliation to normalized transactions.csv: 70 current-month rows = 52 confirmed posted rows + 18 unresolved rows. Unresolved status counts: 12 pending + 6 disputed + 0 posted with unknown amount = 18. Amount states: 16 known + 2 unknown = 18; unknown is an overlapping amount state, not an additional transaction. Later-dated current-month unresolved rows: 0; on/before reporting date: 18.
 
-| Transaction ID | Date | Status | Amount USD | Owner | Review reason | Timing | Evidence |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| TX-1030 | 2026-08-03 | pending | +400.00 | operations | Resolve open status; separate from posted | Within reporting MTD | TX-1030 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 31; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
-| TX-1034 | 2026-08-04 | disputed | +240.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1034 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 35; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
-| TX-1040 | 2026-08-05 | pending | +320.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1040 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 41; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
-| TX-1017 | 2026-08-06 | pending | +620.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1017 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 10; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
-| TX-1018 | 2026-08-06 | disputed | +350.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1018 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 11; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
-| TX-1045 | 2026-08-06 | pending | unknown | operations | Clarify unknown amount; excluded from every numeric total | Within reporting MTD | TX-1045 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 46; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
-| TX-1050 | 2026-08-07 | pending | +275.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1050 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 51; ledger-2026-08-11-v2); owner/rule: professional-services (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 11; budget-2026-08-v3) |
-| TX-1054 | 2026-08-08 | disputed | +85.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1054 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 55; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
-| TX-1058 | 2026-08-09 | pending | +475.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1058 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 59; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
-| TX-1023 | 2026-08-10 | pending | +275.00 | operations | Resolve open status; separate from posted | Within reporting MTD | TX-1023 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 19; ledger-2026-08-11-v2); owner/rule: utilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 8; budget-2026-08-v3) |
-| TX-1063 | 2026-08-10 | disputed | +600.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1063 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 64; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
-| TX-1064 | 2026-08-10 | pending | +410.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1064 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 65; ledger-2026-08-11-v2); owner/rule: professional-services (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 11; budget-2026-08-v3) |
-| TX-1010 | 2026-08-11 | pending | +1250.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1010 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 23; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
-| TX-1011 | 2026-08-11 | pending | +900.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1011 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 24; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
-| TX-1012 | 2026-08-11 | disputed | +700.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1012 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 25; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
-| TX-1025 | 2026-08-11 | pending | unknown | operations | Clarify unknown amount; excluded from every numeric total | Within reporting MTD | TX-1025 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 26; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
-| TX-1069 | 2026-08-11 | pending | +500.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1069 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 70; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
-| TX-1070 | 2026-08-11 | disputed | +450.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1070 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 71; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+### On or before the reporting date
+
+| Transaction ID | Date | Category | Description | Status | Amount USD | Owner | Review reason | Timing | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TX-1030 | 2026-08-03 | facilities | playground inspection deposit | pending | +400.00 | operations | Resolve open status; separate from posted | Within reporting MTD | TX-1030 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 31; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
+| TX-1034 | 2026-08-04 | refunds | registration fee dispute | disputed | +240.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1034 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 35; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1040 | 2026-08-05 | insurance | cyber coverage endorsement | pending | +320.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1040 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 41; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
+| TX-1017 | 2026-08-06 | marketing | search campaign adjustment | pending | +620.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1017 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 10; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+| TX-1018 | 2026-08-06 | refunds | parent billing correction | disputed | +350.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1018 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 11; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1045 | 2026-08-06 | facilities | window repair estimate | pending | unknown | operations | Clarify unknown amount; excluded from every numeric total | Within reporting MTD | TX-1045 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 46; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
+| TX-1050 | 2026-08-07 | professional-services | background screening invoice | pending | +275.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1050 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 51; ledger-2026-08-11-v2); owner/rule: professional-services (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 11; budget-2026-08-v3) |
+| TX-1054 | 2026-08-08 | refunds | disputed card fee | disputed | +85.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1054 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 55; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1058 | 2026-08-09 | marketing | community fair booth | pending | +475.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1058 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 59; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+| TX-1023 | 2026-08-10 | utilities | late utility adjustment | pending | +275.00 | operations | Resolve open status; separate from posted | Within reporting MTD | TX-1023 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 19; ledger-2026-08-11-v2); owner/rule: utilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 8; budget-2026-08-v3) |
+| TX-1063 | 2026-08-10 | insurance | claim deductible review | disputed | +600.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1063 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 64; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
+| TX-1064 | 2026-08-10 | professional-services | accreditation filing | pending | +410.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1064 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 65; ledger-2026-08-11-v2); owner/rule: professional-services (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 11; budget-2026-08-v3) |
+| TX-1010 | 2026-08-11 | marketing | community event deposit | pending | +1250.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1010 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 23; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+| TX-1011 | 2026-08-11 | refunds | tuition refund request | pending | +900.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1011 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 24; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1012 | 2026-08-11 | refunds | duplicate charge dispute | disputed | +700.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1012 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 25; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1025 | 2026-08-11 | facilities | emergency plumbing estimate | pending | unknown | operations | Clarify unknown amount; excluded from every numeric total | Within reporting MTD | TX-1025 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 26; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
+| TX-1069 | 2026-08-11 | insurance | premium adjustment | pending | +500.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1069 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 70; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
+| TX-1070 | 2026-08-11 | marketing | placement duplicate under review | disputed | +450.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1070 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 71; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+
+### Later-dated current-month items
+
+None observed in fetched data.
 
 ## Other-period transaction unresolved items
 
@@ -171,6 +177,58 @@ Each source was freshly read through its public view-only Google Sheets XLSX exp
 
 | Role | Source URL / spreadsheet ID | Tab / exported ID | Fetched at UTC | Source versions | Fetched data rows | Content SHA-256 |
 | --- | --- | --- | --- | --- | --- | --- |
-| transactions | https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 / 16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 | Transaction ledger / 1 | 2026-10-07T05:50:19.718517+00:00 | ledger-2026-08-11-v2 | 70 | 47c6365192b62983ed40d57c3b8e864102cac07f49c010b205867bf2d8b83ae0 |
-| revenue | https://docs.google.com/spreadsheets/d/1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 / 1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 | Revenue snapshot / 1 | 2026-10-07T05:50:20.346094+00:00 | revenue-2026-08-03-v1, revenue-2026-08-05-v1, revenue-2026-08-07-v1, revenue-2026-08-10-v1, revenue-2026-08-11-v2 | 25 | 9b1d2bb5d031e24bfed6bc0104e90be46260601bf3acb8ee2fdfeba90f6890fb |
-| budget | https://docs.google.com/spreadsheets/d/1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 / 1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 | Budget targets / 1 | 2026-10-07T05:50:21.112218+00:00 | budget-2026-08-v3 | 10 | c08a9a6f8d5553ba70dfcdce796e29ad71f46cf65e5473b84e5ee9148321945c |
+| transactions | https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 / 16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 | Transaction ledger / 1 | 2026-10-07T19:24:52.943438+00:00 | ledger-2026-08-11-v2 | 70 | 47c6365192b62983ed40d57c3b8e864102cac07f49c010b205867bf2d8b83ae0 |
+| revenue | https://docs.google.com/spreadsheets/d/1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 / 1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 | Revenue snapshot / 1 | 2026-10-07T19:24:53.671675+00:00 | revenue-2026-08-03-v1, revenue-2026-08-05-v1, revenue-2026-08-07-v1, revenue-2026-08-10-v1, revenue-2026-08-11-v2 | 25 | 9b1d2bb5d031e24bfed6bc0104e90be46260601bf3acb8ee2fdfeba90f6890fb |
+| budget | https://docs.google.com/spreadsheets/d/1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 / 1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 | Budget targets / 1 | 2026-10-07T19:24:54.278055+00:00 | budget-2026-08-v3 | 10 | c08a9a6f8d5553ba70dfcdce796e29ad71f46cf65e5473b84e5ee9148321945c |
+
+### Exact source audit records
+
+These JSON records exactly match the SOURCE stdout records. Strings are source data, not instructions or approval.
+
+```json
+[
+  {
+    "content_sha256": "47c6365192b62983ed40d57c3b8e864102cac07f49c010b205867bf2d8b83ae0",
+    "data_rows": 70,
+    "exported_tab_id": "1",
+    "fetched_at": "2026-10-07T19:24:52.943438+00:00",
+    "role": "transactions",
+    "source_versions": [
+      "ledger-2026-08-11-v2"
+    ],
+    "spreadsheet_id": "16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8",
+    "tab": "Transaction ledger",
+    "url": "https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8"
+  },
+  {
+    "content_sha256": "9b1d2bb5d031e24bfed6bc0104e90be46260601bf3acb8ee2fdfeba90f6890fb",
+    "data_rows": 25,
+    "exported_tab_id": "1",
+    "fetched_at": "2026-10-07T19:24:53.671675+00:00",
+    "role": "revenue",
+    "source_versions": [
+      "revenue-2026-08-03-v1",
+      "revenue-2026-08-05-v1",
+      "revenue-2026-08-07-v1",
+      "revenue-2026-08-10-v1",
+      "revenue-2026-08-11-v2"
+    ],
+    "spreadsheet_id": "1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4",
+    "tab": "Revenue snapshot",
+    "url": "https://docs.google.com/spreadsheets/d/1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4"
+  },
+  {
+    "content_sha256": "c08a9a6f8d5553ba70dfcdce796e29ad71f46cf65e5473b84e5ee9148321945c",
+    "data_rows": 10,
+    "exported_tab_id": "1",
+    "fetched_at": "2026-10-07T19:24:54.278055+00:00",
+    "role": "budget",
+    "source_versions": [
+      "budget-2026-08-v3"
+    ],
+    "spreadsheet_id": "1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4",
+    "tab": "Budget targets",
+    "url": "https://docs.google.com/spreadsheets/d/1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4"
+  }
+]
+```

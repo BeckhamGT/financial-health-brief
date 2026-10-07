@@ -53,7 +53,7 @@ source traceability and cleanup behavior. This is functional validation, not a
 security certification or proof of source completeness.
 
 
-## Second-attempt validation
+## Second-attempt validation (historical)
 
 Validation performed October 7, 2026 (America/New_York), using the published
 assignment and the operator's clarified request. All **17** tests passed, including
@@ -103,12 +103,91 @@ three final SOURCE records and measured SUCCESS output. This establishes recorde
 run evidence beyond the Enabled status; the commit checkpoint is checked separately
 before push. Existing capture refs and configuration are preserved.
 
-For an independent rerun, capture the documented production command's stdout with
-`tee ../live-run.log` (keeping it visible for session capture), then invoke
-`scripts/reconcile_live.py` with the same `--sources`, `--meeting-date`,
-`--reporting-date`, `--prior-business-date`, and `--output ../deliverables`, plus
-`--run-log ../live-run.log`. Its log input verifies production metadata only; it
-always freshly retrieves business data from all three Sheets. This verifier is
-scoped to the assignment's single populated tab per workbook: if a first-tab CSV
-cannot match all normalized rows it fails, rather than claim verification of unseen
-tabs. Production still fetches and validates every populated workbook tab.
+That historical verifier was scoped to one populated tab per workbook. Its first-tab
+CSV route could fail when normalized rows exceeded that tab, but could not establish
+full multi-tab independent verification. The revision record distinguishes that
+coverage from any new all-tab verifier results.
+
+## Revision verification procedure
+
+Record actual results in `../../docs/resubmission.md`. Planning and review recorded
+for this revision must not be presented as events preceding the original build.
+
+1. Run the regression command above. Keep useful existing coverage and add focused
+   tests for changed behaviors: safe source-text presentation while preserving CSV
+   values, readable and partitioned queues, publication/storage failure recovery,
+   and complete independent source inventory/metadata comparison.
+2. Run the full live command in runtime.md from the skill root. Keep actual SOURCE
+   stdout visible; use a temporary log outside the repository only as verification
+   input, never as cached primary business input or a submitted session-log substitute.
+3. Invoke `python3 scripts/reconcile_live.py` with the same three `--sources`,
+   `--meeting-date`, `--reporting-date`, `--prior-business-date`,
+   `--output ../deliverables`, plus `--run-log "$run_log"`. Its fresh reads must
+   independently establish the populated tab inventory and reconcile all original
+   business fields, source URL/tab/physical row, required headers, five daily sums,
+   every budget category/predicate/owner/rule, paired revenue and other metrics,
+   queue identities/amount states and exact stdout/report metadata. It must not
+   import production calculation functions. Report any coverage limitation.
+4. Compare two fresh production runs for identical normalized CSV bytes and business
+   findings. Fetch timestamps may differ. If source versions/content changed between
+   reads, identify the change and run again with fresh evidence rather than force a
+   match to an older snapshot.
+5. After a success, cause a controlled failure and inspect every required output path.
+   Confirm stale marking/removal or the documented quarantine instruction if storage
+   access prevents changes. Follow runtime.md recovery; then perform a final successful
+   live run, independently reconcile it and inspect its recorded SOURCE output.
+6. Measure the final end-to-end production subprocess wall time, including retrieval,
+   validation, calculations and publication. Keep agent usage, development effort and
+   human review time separate. The interview's approximately one-hour manual baseline
+   and prior measured machine runtime do not establish complete-workflow time savings;
+   unavailable costs remain unknown.
+
+When using tee in **zsh**, preserve both process statuses immediately:
+
+```zsh
+set -o pipefail
+run_log=$(mktemp "${TMPDIR:-/tmp}/project-a-live.XXXXXX")
+```
+
+Run the complete runtime.md command, appending `2>&1 | tee "$run_log"`, then
+immediately execute:
+
+```zsh
+run_statuses=("${pipestatus[@]}")
+brief_status=${run_statuses[1]}
+tee_status=${run_statuses[2]}
+printf 'PROGRAM_EXIT=%s LOG_EXIT=%s LOG=%s\n' "$brief_status" "$tee_status" "$run_log"
+```
+
+The status capture belongs immediately after the production pipeline, before any
+other command overwrites `pipestatus`. Proceed only when both statuses are zero.
+In bash, capture `PIPESTATUS` immediately and use indexes 0 and 1 instead. A logging
+failure is not proof of a production failure; either failure requires investigation
+before relying on the recorded run. Do not infer brief.py success from tee's exit.
+
+## Skill and human evaluation
+
+Use the official format validator from the repository root when its development
+tooling is available:
+
+```bash
+uvx --from skills-ref agentskills validate daily-financial-health-brief
+```
+
+An isolated temporary environment containing `skills-ref` is an alternative when
+uvx is unavailable; it is validation tooling, not a production dependency. Confirm
+frontmatter, canonical name, relative references, executable script and the discovery
+link in addition to the validator. A format pass is not host-loading evidence.
+
+For operator evaluation, use a genuine fresh skill-capable session when supported.
+Confirm capture in that session, verify the skill appears in its catalog, then give
+an explicit skill request with the three live URLs, all three dates, financial brief,
+read-only boundaries and human draft review. Supply neither expected live totals nor
+intended fixes. Observe source use, uncertainties, output review and permission
+boundaries. If only a subagent/manual package read is possible, describe it accurately
+as that form of evaluation and leave fresh-host loading unverified.
+
+Present the resulting draft to the learner in small groups: trace a figure to source
+rows, inspect a credit, retain an unknown, inspect a strict boundary and check a queue
+entry with its owner. Record only comments actually received, resulting corrections
+and remaining questions. Learner review is distinct from operations-owner approval.
