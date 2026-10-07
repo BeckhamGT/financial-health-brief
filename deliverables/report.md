@@ -2,6 +2,26 @@
 
 **Draft for human review**
 
+## Management summary
+
+Operations meeting: **2026-08-12**. Reporting date: **2026-08-11**; prior business date: **2026-08-10**; budget period: **2026-08**. Dates are operator supplied; no business-day calendar is inferred.
+
+| Daily figure | Exact signed USD |
+| --- | --- |
+| Reporting-date posted total | +2750.35 |
+| Reporting-date pending-confirmed total | +2650.00 |
+| Reporting-date disputed-confirmed total | +1150.00 |
+| Prior-business-day posted total | +7894.50 |
+| Reporting-date posted minus prior-business-day posted | -5144.15 |
+
+Principal budget risks: material posted overages — facilities USD +885.00 (operations); professional-services USD +830.00 (finance); software USD +561.00 (technology); supplies USD +1630.75 (operations). Separate exposure risks: refunds: pending-confirmed USD +900.00 exceeds remaining posted headroom USD +500.00 (finance). All category thresholds, nonmaterial overages, pending/disputed exposure, and source review rules are in [budget comparisons](#month-to-date-budget-comparisons) and [budget risks](#budget-risks).
+
+tuition-system: collected revenue USD +24600.00 → +25100.00 (change +500.00); outstanding balance USD +4700.00 → +4300.00 (change -400.00). These are separate snapshot comparisons; their meaning is subject to source-owner clarification. See [revenue and balance evidence](#revenue-and-balance-snapshot-comparisons).
+
+Current-month review: **18 unresolved transactions**, including **2 unknown amounts** (TX-1045, TX-1025); 0 are later than the reporting date. Unknowns are excluded from numeric totals; owners must obtain their amounts. See the [complete current-month queue](#current-month-transaction-unresolved-queue).
+
+Operations owner: review spending changes, owner escalations, disputed outcomes, and proposed actions before use. This draft records no stakeholder approval. [Daily calculation evidence](#five-required-figures), [definitions](#calculation-definitions-and-limitations), and [fresh source metadata](#source-retrieval-metadata) support review.
+
 Reporting date: **2026-08-11**. Prior business date: **2026-08-10** (operator-confirmed).
 
 Run status: **VALIDATED**. Currency for spend/budget figures: USD. Unknown amounts remain unknown.
@@ -20,18 +40,18 @@ Run status: **VALIDATED**. Currency for spend/budget figures: USD. Unknown amoun
 
 Inclusive posted activity from 2026-08-01 through 2026-08-11, compared with the full 2026-08 monthly allocation (no prorating or projection).
 
-| Category | Owner | Budget USD | Posted MTD USD | Posted − budget USD | Headroom USD | Pending-confirmed MTD USD | Disputed-confirmed MTD USD | Material variance | Source review rule |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| facilities | operations | +4200.00 | +5085.00 | +885.00 | -885.00 | +400.00 | +0.00 | yes | review_material_overage |
-| insurance | finance | +3000.00 | +3500.00 | +500.00 | -500.00 | +820.00 | +600.00 | no | review_material_overage |
-| marketing | marketing | +6000.00 | +6600.00 | +600.00 | -600.00 | +2345.00 | +450.00 | no | review_material_overage |
-| professional-services | finance | +2500.00 | +3330.00 | +830.00 | -830.00 | +685.00 | +0.00 | yes | review_material_overage |
-| refunds | finance | +1300.00 | +800.00 | -500.00 | +500.00 | +900.00 | +1375.00 | no | review_all_pending_or_disputed |
-| software | technology | +2600.00 | +3161.00 | +561.00 | -561.00 | +0.00 | +0.00 | yes | review_material_overage |
-| staffing | operations | +21000.00 | +23070.00 | +2070.00 | -2070.00 | +0.00 | +0.00 | no | review_material_overage |
-| supplies | operations | +4500.00 | +6130.75 | +1630.75 | -1630.75 | +0.00 | +0.00 | yes | review_material_overage |
-| training | operations | +1500.00 | +0.00 | -1500.00 | +1500.00 | +0.00 | +0.00 | yes | review_material_overage |
-| utilities | operations | +1800.00 | +2020.55 | +220.55 | -220.55 | +275.00 | +0.00 | no | review_material_overage |
+| Category | Owner | Budget USD | Posted MTD USD | Posted − budget USD | 10% boundary USD | Abs variance > 10%? | Abs variance > USD 500? | Headroom USD | Pending-confirmed MTD USD | Disputed-confirmed MTD USD | Material variance | Source review rule |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| facilities | operations | +4200.00 | +5085.00 | +885.00 | +420.00 | yes | yes | -885.00 | +400.00 | +0.00 | yes | review_material_overage |
+| insurance | finance | +3000.00 | +3500.00 | +500.00 | +300.00 | yes | no | -500.00 | +820.00 | +600.00 | no | review_material_overage |
+| marketing | marketing | +6000.00 | +6600.00 | +600.00 | +600.00 | no | yes | -600.00 | +2345.00 | +450.00 | no | review_material_overage |
+| professional-services | finance | +2500.00 | +3330.00 | +830.00 | +250.00 | yes | yes | -830.00 | +685.00 | +0.00 | yes | review_material_overage |
+| refunds | finance | +1300.00 | +800.00 | -500.00 | +130.00 | yes | no | +500.00 | +900.00 | +1375.00 | no | review_all_pending_or_disputed |
+| software | technology | +2600.00 | +3161.00 | +561.00 | +260.00 | yes | yes | -561.00 | +0.00 | +0.00 | yes | review_material_overage |
+| staffing | operations | +21000.00 | +23070.00 | +2070.00 | +2100.00 | no | yes | -2070.00 | +0.00 | +0.00 | no | review_material_overage |
+| supplies | operations | +4500.00 | +6130.75 | +1630.75 | +450.00 | yes | yes | -1630.75 | +0.00 | +0.00 | yes | review_material_overage |
+| training | operations | +1500.00 | +0.00 | -1500.00 | +150.00 | yes | yes | +1500.00 | +0.00 | +0.00 | yes | review_material_overage |
+| utilities | operations | +1800.00 | +2020.55 | +220.55 | +180.00 | yes | no | -220.55 | +275.00 | +0.00 | no | review_material_overage |
 
 ### Budget calculation evidence
 
@@ -72,6 +92,11 @@ Inclusive posted activity from 2026-08-01 through 2026-08-11, compared with the 
 
 ## Revenue and balance snapshot comparisons
 
+| Date | Source | Unit | Collected revenue | Outstanding balance | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| 2026-08-10 | tuition-system | USD | +24600.00 | +4700.00 | collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 17; revenue-2026-08-10-v1); outstanding_balance (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 18; revenue-2026-08-10-v1) |
+| 2026-08-11 | tuition-system | USD | +25100.00 | +4300.00 | collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 22; revenue-2026-08-11-v2); outstanding_balance (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 23; revenue-2026-08-11-v2) |
+
 | Source | Metric | Unit | 2026-08-10 | 2026-08-11 | Reporting − prior | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | tuition-system | collected_revenue | USD | +24600.00 | +25100.00 | +500.00 | collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 17; revenue-2026-08-10-v1); collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 22; revenue-2026-08-11-v2) |
@@ -80,46 +105,61 @@ Inclusive posted activity from 2026-08-01 through 2026-08-11, compared with the 
 | tuition-system | past_due_accounts | source-defined count/unit | +8 | +7 | -1 | past_due_accounts (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 20; revenue-2026-08-10-v1); past_due_accounts (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 25; revenue-2026-08-11-v2) |
 | tuition-system | payment_plan_balance | USD | +2100.00 | +1950.00 | -150.00 | payment_plan_balance (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 21; revenue-2026-08-10-v1); payment_plan_balance (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 26; revenue-2026-08-11-v2) |
 
-Compare each matching metric/source/currency directly between snapshots. No sum of snapshots and no daily-flow or cumulative interpretation of collected_revenue is assumed.
+Compare matching metric/source/currency snapshots separately. Collected revenue rose or fell by its own signed change; outstanding balance has its own signed change. Their difference is not a collection rate, cash flow, profit, or evidence of cumulative revenue. Daily-flow versus cumulative meaning remains unconfirmed.
 
-## Unresolved queue and human review
+## Current-month transaction unresolved queue
 
-| Item | Responsible owner | Required clarification / review | Evidence |
+Scope: every recognized 2026-08 transaction that is pending, disputed, or has an unknown amount, including dates after 2026-08-11. Each transaction appears once.
+
+Reconciliation to normalized transactions.csv: 70 current-month rows = 52 confirmed posted rows + 18 unresolved rows. Unresolved status counts: 12 pending + 6 disputed + 0 posted with unknown amount = 18. Amount states: 16 known + 2 unknown = 18; unknown is an overlapping amount state, not an additional transaction. Later-dated current-month unresolved rows: 0; on/before reporting date: 18.
+
+| Transaction ID | Date | Status | Amount USD | Owner | Review reason | Timing | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| TX-1030 | 2026-08-03 | pending | +400.00 | operations | Resolve open status; separate from posted | Within reporting MTD | TX-1030 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 31; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
+| TX-1034 | 2026-08-04 | disputed | +240.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1034 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 35; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1040 | 2026-08-05 | pending | +320.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1040 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 41; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
+| TX-1017 | 2026-08-06 | pending | +620.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1017 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 10; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+| TX-1018 | 2026-08-06 | disputed | +350.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1018 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 11; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1045 | 2026-08-06 | pending | unknown | operations | Clarify unknown amount; excluded from every numeric total | Within reporting MTD | TX-1045 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 46; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
+| TX-1050 | 2026-08-07 | pending | +275.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1050 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 51; ledger-2026-08-11-v2); owner/rule: professional-services (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 11; budget-2026-08-v3) |
+| TX-1054 | 2026-08-08 | disputed | +85.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1054 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 55; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1058 | 2026-08-09 | pending | +475.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1058 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 59; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+| TX-1023 | 2026-08-10 | pending | +275.00 | operations | Resolve open status; separate from posted | Within reporting MTD | TX-1023 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 19; ledger-2026-08-11-v2); owner/rule: utilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 8; budget-2026-08-v3) |
+| TX-1063 | 2026-08-10 | disputed | +600.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1063 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 64; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
+| TX-1064 | 2026-08-10 | pending | +410.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1064 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 65; ledger-2026-08-11-v2); owner/rule: professional-services (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 11; budget-2026-08-v3) |
+| TX-1010 | 2026-08-11 | pending | +1250.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1010 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 23; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+| TX-1011 | 2026-08-11 | pending | +900.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1011 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 24; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1012 | 2026-08-11 | disputed | +700.00 | finance | Resolve open status; separate from posted; mandatory pending/disputed review per source rule regardless of amount | Within reporting MTD | TX-1012 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 25; ledger-2026-08-11-v2); owner/rule: refunds (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 5; budget-2026-08-v3) |
+| TX-1025 | 2026-08-11 | pending | unknown | operations | Clarify unknown amount; excluded from every numeric total | Within reporting MTD | TX-1025 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 26; ledger-2026-08-11-v2); owner/rule: facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
+| TX-1069 | 2026-08-11 | pending | +500.00 | finance | Resolve open status; separate from posted | Within reporting MTD | TX-1069 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 70; ledger-2026-08-11-v2); owner/rule: insurance (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 10; budget-2026-08-v3) |
+| TX-1070 | 2026-08-11 | disputed | +450.00 | marketing | Resolve open status; separate from posted | Within reporting MTD | TX-1070 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 71; ledger-2026-08-11-v2); owner/rule: marketing (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 4; budget-2026-08-v3) |
+
+## Other-period transaction unresolved items
+
+0 rows outside 2026-08; preserved in normalized data and excluded from current-month counts.
+
+None observed in fetched data.
+
+## Nontransaction clarifications and human review
+
+| Issue | Responsible owner | Required review | Evidence |
 | --- | --- | --- | --- |
-| Collected revenue interpretation | tuition-system source owner | Daily-flow versus cumulative meaning was not established; comparisons are snapshot-only until clarified | collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 17; revenue-2026-08-10-v1); collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 22; revenue-2026-08-11-v2) |
 | Material overage: facilities | operations | Review budget breach and recommend action for operations-owner decision | facilities (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 6; budget-2026-08-v3) |
 | Material overage: professional-services | finance | Review budget breach and recommend action for operations-owner decision | professional-services (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 11; budget-2026-08-v3) |
 | Material overage: software | technology | Review budget breach and recommend action for operations-owner decision | software (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 7; budget-2026-08-v3) |
 | Material overage: supplies | operations | Review budget breach and recommend action for operations-owner decision | supplies (1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4/Budget targets row 3; budget-2026-08-v3) |
-| Unknown amount: TX-1025 (2026-08-11, emergency plumbing estimate) | operations | Clarify amount with ledger source owner; excluded from every numeric total | TX-1025 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 26; ledger-2026-08-11-v2) |
-| Unknown amount: TX-1045 (2026-08-06, window repair estimate) | operations | Clarify amount with ledger source owner; excluded from every numeric total | TX-1045 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 46; ledger-2026-08-11-v2) |
-| disputed: TX-1012 USD +700.00 | finance | Mandatory review of every pending/disputed item per source rule | TX-1012 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 25; ledger-2026-08-11-v2) |
-| disputed: TX-1018 USD +350.00 | finance | Mandatory review of every pending/disputed item per source rule | TX-1018 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 11; ledger-2026-08-11-v2) |
-| disputed: TX-1034 USD +240.00 | finance | Mandatory review of every pending/disputed item per source rule | TX-1034 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 35; ledger-2026-08-11-v2) |
-| disputed: TX-1054 USD +85.00 | finance | Mandatory review of every pending/disputed item per source rule | TX-1054 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 55; ledger-2026-08-11-v2) |
-| disputed: TX-1063 USD +600.00 | finance | Resolve open transaction status; keep separate from posted | TX-1063 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 64; ledger-2026-08-11-v2) |
-| disputed: TX-1070 USD +450.00 | marketing | Resolve open transaction status; keep separate from posted | TX-1070 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 71; ledger-2026-08-11-v2) |
-| pending: TX-1010 USD +1250.00 | marketing | Resolve open transaction status; keep separate from posted | TX-1010 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 23; ledger-2026-08-11-v2) |
-| pending: TX-1011 USD +900.00 | finance | Mandatory review of every pending/disputed item per source rule | TX-1011 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 24; ledger-2026-08-11-v2) |
-| pending: TX-1017 USD +620.00 | marketing | Resolve open transaction status; keep separate from posted | TX-1017 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 10; ledger-2026-08-11-v2) |
-| pending: TX-1023 USD +275.00 | operations | Resolve open transaction status; keep separate from posted | TX-1023 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 19; ledger-2026-08-11-v2) |
-| pending: TX-1030 USD +400.00 | operations | Resolve open transaction status; keep separate from posted | TX-1030 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 31; ledger-2026-08-11-v2) |
-| pending: TX-1040 USD +320.00 | finance | Resolve open transaction status; keep separate from posted | TX-1040 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 41; ledger-2026-08-11-v2) |
-| pending: TX-1050 USD +275.00 | finance | Resolve open transaction status; keep separate from posted | TX-1050 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 51; ledger-2026-08-11-v2) |
-| pending: TX-1058 USD +475.00 | marketing | Resolve open transaction status; keep separate from posted | TX-1058 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 59; ledger-2026-08-11-v2) |
-| pending: TX-1064 USD +410.00 | finance | Resolve open transaction status; keep separate from posted | TX-1064 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 65; ledger-2026-08-11-v2) |
-| pending: TX-1069 USD +500.00 | finance | Resolve open transaction status; keep separate from posted | TX-1069 (16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8/Transaction ledger row 70; ledger-2026-08-11-v2) |
+| Collected revenue interpretation | tuition-system source owner | Daily-flow versus cumulative meaning was not established; comparisons are snapshot-only until clarified | collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 17; revenue-2026-08-10-v1); collected_revenue (1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4/Revenue snapshot row 22; revenue-2026-08-11-v2) |
 
 The operations owner reviews spending changes, disputed outcomes, escalations and all irreversible actions. Category owners follow the source-defined review rules. The Finance and Operations Manager confirms reporting dates and source completeness and clarifies missing, conflicting or stale evidence with the responsible source owner before concluding. This draft authorizes no spending, payment, source edit or dispute resolution.
 
-The two source rules mean: review_material_overage triggers on positive posted MTD overage satisfying both strict materiality tests; review_all_pending_or_disputed requires review of every MTD pending/disputed item, independently of amount/materiality. Other open items are still visible in the queue.
+The two source rules mean: review_material_overage triggers on positive posted MTD overage satisfying both strict materiality tests; review_all_pending_or_disputed requires review of every pending/disputed item in its budget period, independently of amount/materiality. Other open items are still visible in the queue.
 
 ## Calculation definitions and limitations
 
 - Exact-date daily totals include only confirmed amounts of that status on that date. Pending/disputed labels paired with confirmed amount_status mean pending-confirmed/disputed-confirmed.
 - Unknown amounts stay blank or explicitly unknown in normalized data; they contribute neither zero nor an estimate to any sum. Numeric subtotals are known-amount totals and exposure remains incomplete.
 - Confirmed negative posted amounts are credits/corrections and reduce both daily and inclusive calendar MTD posted totals, including weekend activity.
-- Material budget variance: abs(posted MTD − monthly allocation) > 0.10 × abs(monthly allocation) AND > USD 500. Equality at either boundary is not material. Under-allocation mid-month is not forecast savings.
+- Material budget variance: abs(posted MTD − monthly allocation) > 0.10 × abs(monthly allocation) AND > USD 500. Equality at either boundary is not material. A zero allocation has a zero 10% boundary; compare absolute dollar amounts directly without division, so only a variance strictly above USD 500 is material. Under-allocation mid-month is not forecast savings.
 - All money uses Python Decimal arithmetic; USD inputs with fractional cents are rejected rather than rounded. Different currencies require clarification instead of invented exchange rates.
 - All recognized source rows, all periods/dates, unknowns, credits, and extra business columns are preserved in the CSVs. Sources are point-in-time reads, not a transactional cross-workbook snapshot.
 - Fetch timestamps prove retrieval time, not business completeness. Source versions below are recorded per row. This requested historical reporting period uses fresh retrieval of dated source records; no freshness SLA or cumulative revenue meaning has been invented.
@@ -131,6 +171,6 @@ Each source was freshly read through its public view-only Google Sheets XLSX exp
 
 | Role | Source URL / spreadsheet ID | Tab / exported ID | Fetched at UTC | Source versions | Fetched data rows | Content SHA-256 |
 | --- | --- | --- | --- | --- | --- | --- |
-| transactions | https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 / 16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 | Transaction ledger / 1 | 2026-10-07T00:42:14.196911+00:00 | ledger-2026-08-11-v2 | 70 | 47c6365192b62983ed40d57c3b8e864102cac07f49c010b205867bf2d8b83ae0 |
-| revenue | https://docs.google.com/spreadsheets/d/1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 / 1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 | Revenue snapshot / 1 | 2026-10-07T00:42:14.682020+00:00 | revenue-2026-08-03-v1, revenue-2026-08-05-v1, revenue-2026-08-07-v1, revenue-2026-08-10-v1, revenue-2026-08-11-v2 | 25 | 9b1d2bb5d031e24bfed6bc0104e90be46260601bf3acb8ee2fdfeba90f6890fb |
-| budget | https://docs.google.com/spreadsheets/d/1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 / 1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 | Budget targets / 1 | 2026-10-07T00:42:15.083488+00:00 | budget-2026-08-v3 | 10 | c08a9a6f8d5553ba70dfcdce796e29ad71f46cf65e5473b84e5ee9148321945c |
+| transactions | https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 / 16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8 | Transaction ledger / 1 | 2026-10-07T05:50:19.718517+00:00 | ledger-2026-08-11-v2 | 70 | 47c6365192b62983ed40d57c3b8e864102cac07f49c010b205867bf2d8b83ae0 |
+| revenue | https://docs.google.com/spreadsheets/d/1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 / 1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4 | Revenue snapshot / 1 | 2026-10-07T05:50:20.346094+00:00 | revenue-2026-08-03-v1, revenue-2026-08-05-v1, revenue-2026-08-07-v1, revenue-2026-08-10-v1, revenue-2026-08-11-v2 | 25 | 9b1d2bb5d031e24bfed6bc0104e90be46260601bf3acb8ee2fdfeba90f6890fb |
+| budget | https://docs.google.com/spreadsheets/d/1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 / 1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4 | Budget targets / 1 | 2026-10-07T05:50:21.112218+00:00 | budget-2026-08-v3 | 10 | c08a9a6f8d5553ba70dfcdce796e29ad71f46cf65e5473b84e5ee9148321945c |

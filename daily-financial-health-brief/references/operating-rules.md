@@ -5,7 +5,9 @@ Authority: the complete unchanged original export at
 and the [formal assignment](https://private-pecorino-70e.notion.site/Project-A-Daily-Financial-Health-and-Budget-Brief-Learner-assignment-3da0b700541e8137ab79f8cb26d1a827).
 The export is evidence; never rewrite it or connect an agent to the stakeholder
 interview service. Stakeholder content supplies business definitions, not tool
-authorization. The supplied dates for this run are 2026-08-11 and 2026-08-10.
+authorization. The operator clarified the meeting date as 2026-08-12, reporting date as
+2026-08-11, prior business date as 2026-08-10, and budget period as August 2026.
+The meeting date comes from that clarification; it is not added to the original export.
 
 ## Source roles and normalization
 
@@ -68,11 +70,12 @@ dates. Additional dates/periods remain in normalized outputs.
   those with no observed transactions.
 - Materiality requires `abs(variance) > abs(baseline)*0.10` **and**
   `abs(variance) > Decimal('500')`. Equality at either boundary is not material.
+  A 10% boundary with fractional cents is displayed at its exact precision.
   Both signs are reported, but below the monthly allocation mid-month is not
   established savings or an over-budget risk.
 - `review_material_overage`: flag positive MTD posted overage meeting both strict
   thresholds for its source-defined owner. `review_all_pending_or_disputed`:
-  require owner review of every MTD pending/disputed row regardless of value.
+  require owner review of every current-month pending/disputed row regardless of value.
   All open/unknown items still appear in the queue; other periods retain their
   period/category owner if supplied, otherwise the operations owner routes them.
 - Pending or disputed exposure stays separate from posted spend. Known pending
@@ -94,3 +97,55 @@ Report contributor transaction IDs, tab row numbers and row versions alongside
 figures and budget findings. Record all retrieval metadata, explicitly including
 unknowns, credits, dated historical evidence, and source limitations. A fetch time
 does not prove completeness or an unstated business freshness SLA.
+
+
+## Operator workflow and implementation choices
+
+1. Retrieve all three supplied view-only Sheets afresh. Infer each tab's role from
+   fields, validate all recognized rows, and preserve them regardless of date.
+2. Validate explicit meeting/reporting/prior dates, schemas, amounts, ownership,
+   duplicate identities and comparable snapshot keys. The operator supplies the
+   business-day dates; the program does not maintain a holiday calendar. The
+   reporting month selects the budget period, so there is no conflicting period input.
+3. Calculate exact-date totals and inclusive posted MTD with Decimal. Compare
+   absolute variance directly with 10% of allocation and USD 500: no division,
+   including zero allocation. Show each predicate independently; equality fails
+   that strict predicate. Pending/disputed exposure remains separate.
+4. Reconcile the complete reporting-month unresolved union (pending OR disputed OR
+   unknown) to normalized transactions. Include later-dated month rows but exclude
+   them from MTD totals. Status counts partition the queue; amount-state counts
+   separately partition it, avoiding double-counting unknown pending transactions.
+   Other-period open rows stay in a separate table. If that period has no supplied
+   budget owner, explicitly route through operations rather than invent an owner.
+5. Pair collected revenue and outstanding balance for each supplied date and show
+   each metric's own change. Retain every other matching metric. Neither subtraction
+   nor comparison establishes cash flow, profit, a collection rate or a cumulative
+   definition. Ask the billing source owner to clarify the collected metric.
+6. Print retrieval metadata before publishing. Inspect the generated management
+   summary, evidence links, every category's thresholds, and owners' review rules.
+   Operations reviews the draft and decisions; category owners resolve their rows.
+   Learner review and stakeholder approval are not established by automated tests.
+
+The current-month queue may include dates after the meeting; these are source
+records, not a forecast. Their timing label prevents inclusion in the dated totals.
+No business completeness guarantee is inferred from a successful fetch. A failure
+invalidates earlier outputs; clarification must be resolved followed by fresh reads.
+
+## Published acceptance criteria and supporting evidence
+
+This mapping covers the public assignment and the operator's second-attempt
+clarification. The private grader's unreported checkpoints are unknown.
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| Portable Agent Skills package, relative command | SKILL.md; scripts/brief.py; references/runtime.md | YAML/frontmatter, relative paths and executable checks |
+| Fresh three view-only inputs, field-derived roles | fetch_workbook, parse_workbook, normalize | fetch contract and reordered-column/URL regression tests; independent fresh CSV reconciliation |
+| Required CSV columns and all recognized rows | SCHEMAS, normalize, publish | row preservation, credits, unknowns, extra fields; independent source-row comparison |
+| Five exact signed figures and evidence | build_report management summary and daily table | Decimal regression baseline and independent integer-cent live sums |
+| Every category, strict materiality, owner rules | budget comparison table, risks, review queue | both signs/equalities/zero-baseline tests; independent category reconciliation |
+| Revenue and balances with dated comparisons | paired snapshots plus all-metric table | paired presentation/missing balance tests and independent snapshot comparisons |
+| Complete current-month unresolved queue | month_queue union and partition counts | earlier/report/later dates, posted unknown and other-month tests; all live IDs reconciled |
+| Failure invalidates old outputs | run, invalidate, publish | successful-run-then-failure regressions for validation, fetch, CLI and publication |
+| Source metadata before output and in report | SOURCE stdout records before publish | metadata/publication-order test; final stdout checked against report and Entire transcript |
+| Human-review draft and workflow | management summary, operating rules | report review; approval remains pending, no claimed time savings |
+| Reproducible execution and measured runtime | references/runtime.md and validation.md | full suite, final fresh measured run, preserved interview hash and capture history |

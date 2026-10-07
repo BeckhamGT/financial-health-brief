@@ -3,6 +3,7 @@ import contextlib
 import copy
 import csv
 import io
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -35,7 +36,11 @@ def fixture_tabs():
     budgets = [["2026-08", "supplies", "600.00", "USD", "operations", "review_all_pending_or_disputed", "budget", "v2"]]
     revenue = [[PRIOR, "billing", "collected_revenue", "1000", "USD", "before"],
                [DAY, "billing", "collected_revenue", "1500", "USD", "after"],
-               ["2026-07-31", "billing", "collected_revenue", "800", "USD", "older"]]
+               ["2026-07-31", "billing", "collected_revenue", "800", "USD", "older"],
+               [PRIOR, "billing", "outstanding_balance", "400", "USD", "before"],
+               [DAY, "billing", "outstanding_balance", "300", "USD", "after"],
+               [PRIOR, "billing", "enrolled_students", "80", "", "before"],
+               [DAY, "billing", "enrolled_students", "81", "", "after"]]
     result = []
     # Deliberately misleading titles: role is derived solely from header meaning.
     for i, (role, values, title) in enumerate(zip(brief.SCHEMAS, [tx, budgets, revenue], ["Revenue name", "Ledger name", "Budget name"])):
@@ -59,7 +64,7 @@ class BriefTests(unittest.TestCase):
     def successful_run(self, tabs=None, urls=None):
         capture = io.StringIO()
         with contextlib.redirect_stdout(capture):
-            result = brief.run(urls or URLS, DAY, PRIOR, self.output, fake_fetch(tabs or self.tabs))
+            result = brief.run(urls or URLS, DAY, PRIOR, self.output, fake_fetch(tabs or self.tabs), meeting_date="2026-08-12")
         return result, capture.getvalue()
 
     def read_csv(self, role):
@@ -73,7 +78,7 @@ class BriefTests(unittest.TestCase):
 
     def test_rows_credits_unknowns_exact_dates_and_mtd(self):
         result, stdout = self.successful_run()
-        self.assertEqual(result["preserved_rows"], {"transactions": 10, "budget": 1, "revenue": 3})
+        self.assertEqual(result["preserved_rows"], {"transactions": 10, "budget": 1, "revenue": 7})
         self.assertEqual(list(result["figures"].values()), ["+150.15", "+20.20", "+10.10", "+100.00", "+50.15"])
         transactions = {r["transaction_id"]: r for r in self.read_csv("transactions")}
         self.assertEqual(transactions["CREDIT"]["amount"], "-50.05")
@@ -86,13 +91,95 @@ class BriefTests(unittest.TestCase):
         report = (self.output / "report.md").read_text()
         # 25.25 + 100.10 - .10 + 200.20 - 50.05 = 275.40 MTD; excludes future/July/open amounts.
         self.assertIn("| supplies | operations | +600.00 | +275.40 | -324.60 |", report)
-        self.assertIn("Unknown amount: UNKNOWN", report)
-        self.assertIn("Mandatory review of every pending/disputed", report)
+        self.assertIn("| UNKNOWN |", report)
+        self.assertIn("mandatory pending/disputed review", report)
         self.assertIn("| billing | collected_revenue | USD | +1000.00 | +1500.00 | +500.00 |", report)
         self.assertEqual(stdout.count("SOURCE "), 3)
         self.assertLess(stdout.index("SOURCE "), stdout.index("SUCCESS "))
         for url in URLS:
             self.assertIn(url, report)
+
+    def test_current_month_queue_across_dates_and_other_period(self):
+        rows = self.tabs[0].rows
+        # Future open, old-period open, and posted unknown must not be omitted or double counted.
+        rows[8][1][7] = "pending"
+        rows[9][1][7] = "disputed"
+        rows[0][1][5], rows[0][1][10] = "", "unknown"
+        self.successful_run()
+        report = (self.output / "report.md").read_text()
+        section = report.split("## Current-month transaction unresolved queue")[1].split("## Other-period")[0]
+        self.assertIn("9 current-month rows = 4 confirmed posted rows + 5 unresolved rows", section)
+        self.assertIn("3 pending + 1 disputed + 1 posted with unknown amount = 5", section)
+        self.assertIn("3 known + 2 unknown = 5", section)
+        self.assertIn("Later-dated current-month unresolved rows: 1", section)
+        for ident in ("EARLIER", "FUTURE", "UNKNOWN", "PENDING", "DISPUTED"):
+            self.assertEqual(section.count("| " + ident + " |"), 1)
+        self.assertNotIn("| OLD |", section)
+        self.assertIn("| OLD |", report.split("## Other-period transaction unresolved items")[1])
+        self.assertEqual(len(self.read_csv("transactions")), 10)
+
+    def test_meeting_summary_and_paired_snapshots(self):
+        self.successful_run()
+        report = (self.output / "report.md").read_text()
+        summary = report.split("## Management summary")[1].split("## Five required figures")[0]
+        self.assertIn("Operations meeting: **2026-08-12**", summary)
+        self.assertIn("+150.15", summary)
+        self.assertIn("| 2026-08-10 | billing | USD | +1000.00 | +400.00 |", report)
+        self.assertIn("| 2026-08-11 | billing | USD | +1500.00 | +300.00 |", report)
+        self.assertIn("outstanding balance USD +400.00 → +300.00 (change -100.00)", summary)
+        self.assertIn("not a collection rate, cash flow, profit", report)
+        self.assertIn("| billing | enrolled_students | source-defined count/unit | +80 | +81 | +1 |", report)
+        self.tabs[2].rows = [row for row in self.tabs[2].rows if row[1][2] != "outstanding_balance"]
+        with self.assertRaisesRegex(brief.ValidationError, "outstanding_balance"):
+            self.successful_run()
+        self.assert_invalidated()
+
+    def test_zero_baseline_and_displayed_thresholds(self):
+        self.tabs[1].rows[0][1][2] = "0"
+        self.successful_run()
+        report = (self.output / "report.md").read_text()
+        self.assertIn("| +0.00 | +275.40 | +275.40 | +0.00 | yes | no |", report)
+        self.assertIn("Equality at either boundary is not material", report)
+        self.assertIn("without division", report)
+
+    def test_metadata_printed_before_publication_and_identical_in_report(self):
+        stream = io.StringIO()
+        original_publish = brief.publish
+        def verify_publish(output, data, report):
+            records = [json.loads(line[7:]) for line in stream.getvalue().splitlines() if line.startswith("SOURCE ")]
+            self.assertEqual(len(records), 3)
+            self.assertNotIn("SUCCESS", stream.getvalue())
+            for record in records:
+                expected = [record["role"], record["url"] + " / " + record["spreadsheet_id"], record["tab"] + " / " + record["exported_tab_id"], record["fetched_at"], ", ".join(record["source_versions"]), record["data_rows"], record["content_sha256"]]
+                self.assertIn("| " + " | ".join(map(str, expected)) + " |", report)
+            original_publish(output, data, report)
+        with contextlib.redirect_stdout(stream), patch.object(brief, "publish", side_effect=verify_publish):
+            brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="2026-08-15")
+        self.assertIn("Operations meeting: **2026-08-15**", (self.output / "report.md").read_text())
+        with self.assertRaises(brief.ValidationError):
+            brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="not-a-date")
+        self.assert_invalidated()
+
+    def test_category_equality_materiality_display(self):
+        # Isolate posted MTD and cover equality at each boundary, then exceed both.
+        for baseline, posted, expected in [("1000", "1500", "| +100.00 | yes | no |"),
+                                            ("6000", "6600", "| +600.00 | no | yes |"),
+                                            ("6000", "6600.01", "| +600.00 | yes | yes |")]:
+            with self.subTest(baseline=baseline, posted=posted):
+                tabs = fixture_tabs()
+                tabs[1].rows[0][1][2] = baseline
+                for _, row in tabs[0].rows:
+                    if row[7] == "posted":
+                        row[5] = "0"
+                tabs[0].rows[3][1][5] = posted
+                self.successful_run(tabs=tabs)
+                self.assertIn(expected, (self.output / "report.md").read_text())
+
+    def test_fractional_cent_threshold_is_shown_exactly(self):
+        self.tabs[1].rows[0][1][2] = "6000.01"
+        self.successful_run()
+        self.assertIn("| +600.001 |", (self.output / "report.md").read_text())
+        self.assertEqual(brief.signed_boundary(Decimal("0.001")), "+0.001")
 
     def test_strict_materiality_boundaries_both_signs(self):
         for variance, baseline, expected in [("500", "1000", False), ("500.01", "1000", True),
@@ -119,7 +206,7 @@ class BriefTests(unittest.TestCase):
         def fail(url):
             raise brief.ValidationError("Synthetic denied source access")
         with self.assertRaisesRegex(brief.ValidationError, "denied source access"):
-            brief.run(URLS, DAY, PRIOR, self.output, fail)
+            brief.run(URLS, DAY, PRIOR, self.output, fail, meeting_date="2026-08-12")
         self.assert_invalidated()
 
     def test_bad_data_after_success_invalidates(self):
@@ -136,7 +223,7 @@ class BriefTests(unittest.TestCase):
                 tabs = copy.deepcopy(self.tabs)
                 change(tabs)
                 with self.assertRaises(brief.ValidationError):
-                    brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(tabs))
+                    brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(tabs), meeting_date="2026-08-12")
                 self.assert_invalidated()
 
     def test_publication_failure_invalidates(self):
@@ -149,7 +236,7 @@ class BriefTests(unittest.TestCase):
     def test_unknown_pending_requires_source_review_too(self):
         _, _ = self.successful_run()
         report = (self.output / "report.md").read_text()
-        item = next(line for line in report.splitlines() if "Unknown amount: UNKNOWN" in line)
+        item = next(line for line in report.splitlines() if "| UNKNOWN |" in line)
         self.assertIn("mandatory pending/disputed review", item)
         self.assertIn("excluded from every numeric total", item)
 
@@ -157,12 +244,12 @@ class BriefTests(unittest.TestCase):
         self.successful_run()
         with patch.object(Path, "unlink", side_effect=PermissionError("Synthetic cleanup denied")):
             with self.assertRaisesRegex(OSError, "cleanup incomplete"):
-                brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs))
+                brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="2026-08-12")
         self.assertIn("STALE / FAILED", (self.output / "report.md").read_text())
         self.assertNotIn("VALIDATED", (self.output / "report.md").read_text())
 
     def test_cli_invalid_dates_and_arguments_invalidate(self):
-        for extra in [["--sources", *URLS, "--reporting-date", "bad", "--prior-business-date", PRIOR], []]:
+        for extra in [["--sources", *URLS, "--meeting-date", "2026-08-12", "--reporting-date", "bad", "--prior-business-date", PRIOR], []]:
             self.successful_run()
             call = subprocess.run([sys.executable, str(Path(brief.__file__)), "--output", str(self.output), *extra], capture_output=True)
             self.assertNotEqual(call.returncode, 0)

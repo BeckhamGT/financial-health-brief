@@ -20,12 +20,13 @@ python3 scripts/brief.py \
     'https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8' \
     'https://docs.google.com/spreadsheets/d/1pnHBrxWvZBDIQItyxhmaSUZBxF8VMYqo_fyN7JtgyA4' \
     'https://docs.google.com/spreadsheets/d/1DToTpZtuwtVIdCPethZRe4T-y6mxGpWuivWSmR2XZt4' \
+  --meeting-date 2026-08-12 \
   --reporting-date 2026-08-11 \
   --prior-business-date 2026-08-10 \
   --output ../deliverables
 ```
 
-Both dates are per-run inputs: the operator determines the prior business day
+All three dates are per-run inputs: the operator determines the prior business day
 from the operations meeting schedule, rather than a guessed weekend/holiday rule.
 The three URLs may be reordered or replaced with other viewable sources satisfying
 the documented schemas. The command does not search for alternatives.

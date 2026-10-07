@@ -76,6 +76,11 @@ def signed(value, money=True):
     return format(value, "+.2f" if money else "+f")
 
 
+def signed_boundary(value):
+    # A 10% boundary may have fractional cents; retain that precision for strict tests.
+    return signed(value) if value == value.quantize(CENT) else signed(value, money=False).rstrip("0")
+
+
 def material(variance, baseline):
     return abs(variance) > abs(baseline) * Decimal("0.10") and abs(variance) > Decimal("500")
 
@@ -270,7 +275,8 @@ def table(headers, rows):
                      ["| " + " | ".join(escape(c) for c in row) + " |" for row in rows])
 
 
-def build_report(data, metadata, reporting_date, prior_date):
+def build_report(data, metadata, reporting_date, prior_date, meeting_date):
+    iso_date(meeting_date)
     current, prior = iso_date(reporting_date), iso_date(prior_date)
     require(prior < current, "Prior business date must precede reporting date; operator confirms business calendar")
     tx, budgets, revenue = (data[r] for r in ("transactions", "budget", "revenue"))
@@ -304,10 +310,12 @@ def build_report(data, metadata, reporting_date, prior_date):
         is_material = material(variance, baseline)
         headroom = baseline - p
         comparisons.append((category, b["owner"], signed(baseline), signed(p), signed(variance),
+                            signed_boundary(baseline * Decimal("0.10")), "yes" if abs(variance) > baseline * Decimal("0.10") else "no",
+                            "yes" if abs(variance) > Decimal("500") else "no",
                             signed(headroom), signed(q), signed(d), "yes" if is_material else "no", b["review_rule"]))
         if is_material:
             material_findings.append(f"{category}: MTD posted minus monthly budget = USD {signed(variance)}; "
-                                     f"baseline USD {signed(baseline)}, 10% boundary USD {signed(baseline * Decimal('0.10'))}. "
+                                     f"baseline USD {signed(baseline)}, 10% boundary USD {signed_boundary(baseline * Decimal('0.10'))}. "
                                      f"{'Overage' if variance > ZERO else 'Below full monthly allocation; not a forecast or savings decision'}. "
                                      f"Owner: {b['owner']}. Evidence: {evidence(b)}; {refs([r for r in rows if status(r) == 'posted' and r['amount_status'] == 'confirmed'])}.")
         if variance > ZERO:
@@ -320,32 +328,9 @@ def build_report(data, metadata, reporting_date, prior_date):
             risks.append(f"{category}: USD {signed(d)} disputed-confirmed MTD exposure remains separate; no outcome assumed. Owner: {b['owner']}.")
         if b["review_rule"] == "review_material_overage" and variance > ZERO and is_material:
             queue.append((f"Material overage: {category}", b["owner"], "Review budget breach and recommend action for operations-owner decision", evidence(b)))
-        for r in rows:
-            if r["amount_status"] == "unknown":
-                action = "Clarify amount with ledger source owner; excluded from every numeric total"
-                if b["review_rule"] == "review_all_pending_or_disputed" and status(r) in {"pending", "disputed"}:
-                    action += "; mandatory pending/disputed review per source rule regardless of amount"
-                queue.append((f"Unknown amount: {r['transaction_id']} ({r['date']}, {r['description']})", b["owner"],
-                              action, evidence(r)))
-            elif status(r) in {"pending", "disputed"}:
-                mandatory = b["review_rule"] == "review_all_pending_or_disputed"
-                queue.append((f"{status(r)}: {r['transaction_id']} USD {signed(number(r['amount']))}", b["owner"],
-                              "Mandatory review of every pending/disputed item per source rule" if mandatory else "Resolve open transaction status; keep separate from posted", evidence(r)))
         if not rows:
             risks.append(f"{category}: no ledger rows observed for MTD; observed total is USD +0.00, not proof of completeness. Owner: {b['owner']}.")
-    # Preserve and flag unknown/open rows outside MTD as well; period owner is not invented.
-    for r in tx:
-        if r in mtd or (r["amount_status"] != "unknown" and status(r) == "posted"):
-            continue
-        matching = [b for b in budgets if b["period"] == r["date"][:7] and b["category"] == r["category"]]
-        owners = [b["owner"] for b in matching]
-        action = "Clarify unknown amount or resolve open status; retained but excluded from selected date totals"
-        if status(r) in {"pending", "disputed"} and any(b["review_rule"] == "review_all_pending_or_disputed" for b in matching):
-            action += "; mandatory pending/disputed review per that period's source rule"
-        queue.append((f"Outside reporting MTD: {r['transaction_id']} ({r['date']}, {status(r)}, {r['amount_status']})",
-                      ", ".join(sorted(set(owners))) or "Source owner not supplied; operations owner to route",
-                      action, evidence(r)))
-    out += ["", table(["Category", "Owner", "Budget USD", "Posted MTD USD", "Posted − budget USD", "Headroom USD", "Pending-confirmed MTD USD", "Disputed-confirmed MTD USD", "Material variance", "Source review rule"], comparisons),
+    out += ["", table(["Category", "Owner", "Budget USD", "Posted MTD USD", "Posted − budget USD", "10% boundary USD", "Abs variance > 10%?", "Abs variance > USD 500?", "Headroom USD", "Pending-confirmed MTD USD", "Disputed-confirmed MTD USD", "Material variance", "Source review rule"], comparisons),
             "", "### Budget calculation evidence", ""]
     for category, b in sorted(active_budgets.items()):
         out.append(f"- {category}: budget {evidence(b)}; posted MTD contributors: {refs([r for r in mtd if r['category'] == category and status(r) == 'posted' and r['amount_status'] == 'confirmed'])}.")
@@ -367,20 +352,63 @@ def build_report(data, metadata, reporting_date, prior_date):
         if key[1] == "collected_revenue":
             queue.append(("Collected revenue interpretation", key[0] + " source owner",
                           "Daily-flow versus cumulative meaning was not established; comparisons are snapshot-only until clarified", refs([before, after])))
-    out += [table(["Source", "Metric", "Unit", prior_date, reporting_date, "Reporting − prior", "Evidence"], revenue_rows), "",
-            "Compare each matching metric/source/currency directly between snapshots. No sum of snapshots and no daily-flow or cumulative interpretation of collected_revenue is assumed.",
-            "", "## Unresolved queue and human review", "",
-            table(["Item", "Responsible owner", "Required clarification / review", "Evidence"], sorted(queue)), "",
+    paired = []
+    positions = []
+    collected_keys = [k for k in sorted(snapshots[prior_date]) if k[1] == "collected_revenue"]
+    require(collected_keys, "Missing collected_revenue metric")
+    for key in collected_keys:
+        balance_key = (key[0], "outstanding_balance", key[2])
+        require(balance_key in snapshots[prior_date], "Missing matching outstanding_balance metric")
+        for day in (prior_date, reporting_date):
+            collected_row, balance_row = snapshots[day][key], snapshots[day][balance_key]
+            paired.append((day, key[0], key[2] or "source-defined unit", signed(number(collected_row["value"]), key[2] == "USD"),
+                           signed(number(balance_row["value"]), key[2] == "USD"), refs([collected_row, balance_row])))
+        c0, c1 = (number(snapshots[day][key]["value"]) for day in (prior_date, reporting_date))
+        b0, b1 = (number(snapshots[day][balance_key]["value"]) for day in (prior_date, reporting_date))
+        positions.append(f"{key[0]}: collected revenue {key[2] or 'source-defined unit'} {signed(c0, key[2] == 'USD')} → {signed(c1, key[2] == 'USD')} (change {signed(c1-c0, key[2] == 'USD')}); "
+                         f"outstanding balance {key[2] or 'source-defined unit'} {signed(b0, key[2] == 'USD')} → {signed(b1, key[2] == 'USD')} (change {signed(b1-b0, key[2] == 'USD')}).")
+    out += [table(["Date", "Source", "Unit", "Collected revenue", "Outstanding balance", "Evidence"], paired), "",
+            table(["Source", "Metric", "Unit", prior_date, reporting_date, "Reporting − prior", "Evidence"], revenue_rows), "",
+            "Compare matching metric/source/currency snapshots separately. Collected revenue rose or fell by its own signed change; outstanding balance has its own signed change. "
+            "Their difference is not a collection rate, cash flow, profit, or evidence of cumulative revenue. Daily-flow versus cumulative meaning remains unconfirmed.", ""]
+    def open_item(r):
+        return status(r) in {"pending", "disputed"} or r["amount_status"] == "unknown"
+    month_rows = [r for r in tx if r["date"][:7] == period]
+    month_queue = sorted([r for r in month_rows if open_item(r)], key=lambda r: (r["date"], r["transaction_id"]))
+    other_queue = sorted([r for r in tx if r["date"][:7] != period and open_item(r)], key=lambda r: (r["date"], r["transaction_id"]))
+    unknown = [r for r in month_queue if r["amount_status"] == "unknown"]
+    later = [r for r in month_queue if r["date"] > reporting_date]
+    counts = {st: sum(status(r) == st for r in month_queue) for st in ("posted", "pending", "disputed")}
+    def queue_table(rows):
+        values = []
+        for r in rows:
+            matching = [b for b in budgets if b["period"] == r["date"][:7] and b["category"] == r["category"]]
+            owner = matching[0]["owner"] if matching else "Not supplied; operations owner to route"
+            reason = "Clarify unknown amount; excluded from every numeric total" if r["amount_status"] == "unknown" else "Resolve open status; separate from posted"
+            if status(r) in {"pending", "disputed"} and any(b["review_rule"] == "review_all_pending_or_disputed" for b in matching):
+                reason += "; mandatory pending/disputed review per source rule regardless of amount"
+            scope = "Later-dated current-month; excluded from MTD" if r["date"][:7] == period and r["date"] > reporting_date else ("Within reporting MTD" if r["date"][:7] == period else "Other period; excluded from reporting MTD")
+            values.append((r["transaction_id"], r["date"], status(r), "unknown" if r["amount_status"] == "unknown" else signed(number(r["amount"])), owner, reason, scope, evidence(r) + "; owner/rule: " + refs(matching)))
+        return table(["Transaction ID", "Date", "Status", "Amount USD", "Owner", "Review reason", "Timing", "Evidence"], values) if values else "None observed in fetched data."
+    out += ["## Current-month transaction unresolved queue", "",
+            f"Scope: every recognized {period} transaction that is pending, disputed, or has an unknown amount, including dates after {reporting_date}. Each transaction appears once.", "",
+            f"Reconciliation to normalized transactions.csv: {len(month_rows)} current-month rows = {len(month_rows)-len(month_queue)} confirmed posted rows + {len(month_queue)} unresolved rows. "
+            f"Unresolved status counts: {counts['pending']} pending + {counts['disputed']} disputed + {counts['posted']} posted with unknown amount = {len(month_queue)}. "
+            f"Amount states: {len(month_queue)-len(unknown)} known + {len(unknown)} unknown = {len(month_queue)}; unknown is an overlapping amount state, not an additional transaction. "
+            f"Later-dated current-month unresolved rows: {len(later)}; on/before reporting date: {len(month_queue)-len(later)}.", "", queue_table(month_queue), "",
+            "## Other-period transaction unresolved items", "", f"{len(other_queue)} rows outside {period}; preserved in normalized data and excluded from current-month counts.", "", queue_table(other_queue), "",
+            "## Nontransaction clarifications and human review", "",
+            table(["Issue", "Responsible owner", "Required review", "Evidence"], [r for r in queue if r[0].startswith(("Material overage:", "Collected revenue interpretation"))]), "",
             "The operations owner reviews spending changes, disputed outcomes, escalations and all irreversible actions. Category owners follow the source-defined review rules. "
             "The Finance and Operations Manager confirms reporting dates and source completeness and clarifies missing, conflicting or stale evidence with the responsible source owner before concluding. "
             "This draft authorizes no spending, payment, source edit or dispute resolution.", "",
             "The two source rules mean: review_material_overage triggers on positive posted MTD overage satisfying both strict materiality tests; "
-            "review_all_pending_or_disputed requires review of every MTD pending/disputed item, independently of amount/materiality. Other open items are still visible in the queue.", "",
+            "review_all_pending_or_disputed requires review of every pending/disputed item in its budget period, independently of amount/materiality. Other open items are still visible in the queue.", "",
             "## Calculation definitions and limitations", "",
             "- Exact-date daily totals include only confirmed amounts of that status on that date. Pending/disputed labels paired with confirmed amount_status mean pending-confirmed/disputed-confirmed.",
             "- Unknown amounts stay blank or explicitly unknown in normalized data; they contribute neither zero nor an estimate to any sum. Numeric subtotals are known-amount totals and exposure remains incomplete.",
             "- Confirmed negative posted amounts are credits/corrections and reduce both daily and inclusive calendar MTD posted totals, including weekend activity.",
-            "- Material budget variance: abs(posted MTD − monthly allocation) > 0.10 × abs(monthly allocation) AND > USD 500. Equality at either boundary is not material. Under-allocation mid-month is not forecast savings.",
+            "- Material budget variance: abs(posted MTD − monthly allocation) > 0.10 × abs(monthly allocation) AND > USD 500. Equality at either boundary is not material. A zero allocation has a zero 10% boundary; compare absolute dollar amounts directly without division, so only a variance strictly above USD 500 is material. Under-allocation mid-month is not forecast savings.",
             "- All money uses Python Decimal arithmetic; USD inputs with fractional cents are rejected rather than rounded. Different currencies require clarification instead of invented exchange rates.",
             "- All recognized source rows, all periods/dates, unknowns, credits, and extra business columns are preserved in the CSVs. Sources are point-in-time reads, not a transactional cross-workbook snapshot.",
             "- Fetch timestamps prove retrieval time, not business completeness. Source versions below are recorded per row. This requested historical reporting period uses fresh retrieval of dated source records; no freshness SLA or cumulative revenue meaning has been invented.",
@@ -389,7 +417,30 @@ def build_report(data, metadata, reporting_date, prior_date):
             "Each source was freshly read through its public view-only Google Sheets XLSX export. Tab names identify native tabs; exported_tab_id is the XLSX sheet ID, not a Google gid. Data-row counts exclude the header and wholly blank rows. Content SHA-256 covers exact parsed headers and physical source rows before normalization.", "",
             table(["Role", "Source URL / spreadsheet ID", "Tab / exported ID", "Fetched at UTC", "Source versions", "Fetched data rows", "Content SHA-256"],
                   [(m["role"], m["url"] + " / " + m["spreadsheet_id"], m["tab"] + " / " + m["exported_tab_id"], m["fetched_at"], ", ".join(m["source_versions"]), m["data_rows"], m["content_sha256"]) for m in metadata]), ""]
-    return "\n".join(out), {label: signed(value) for label, value, _ in figures}, len(queue)
+    overages, exposure_risks = [], []
+    for category, b in sorted(active_budgets.items()):
+        category_rows = [r for r in mtd if r["category"] == category]
+        category_posted = select_total(category_rows, "posted")
+        category_pending = select_total(category_rows, "pending")
+        variance = category_posted - number(b["budget_amount"])
+        if variance <= ZERO and category_posted + category_pending > number(b["budget_amount"]):
+            exposure_risks.append(f"{category}: pending-confirmed USD {signed(category_pending)} exceeds remaining posted headroom USD {signed(-variance)} ({b['owner']})")
+        if variance > ZERO and material(variance, number(b["budget_amount"])):
+            overages.append(f"{category} USD {signed(variance)} ({b['owner']})")
+    summary = ["## Management summary", "",
+               f"Operations meeting: **{meeting_date}**. Reporting date: **{reporting_date}**; prior business date: **{prior_date}**; budget period: **{period}**. Dates are operator supplied; no business-day calendar is inferred.", "",
+               table(["Daily figure", "Exact signed USD"], [(label, signed(value)) for label, value, _ in figures]), "",
+               "Principal budget risks: " + ("material posted overages — " + "; ".join(overages) if overages else "no material posted overages observed") + ". " +
+               ("Separate exposure risks: " + "; ".join(exposure_risks) + ". " if exposure_risks else "") +
+               "All category thresholds, nonmaterial overages, pending/disputed exposure, and source review rules are in [budget comparisons](#month-to-date-budget-comparisons) and [budget risks](#budget-risks).", "",
+               " ".join(positions) + " These are separate snapshot comparisons; their meaning is subject to source-owner clarification. See [revenue and balance evidence](#revenue-and-balance-snapshot-comparisons).", "",
+               f"Current-month review: **{len(month_queue)} unresolved transactions**, including **{len(unknown)} unknown amounts**" +
+               (" (" + ", ".join(r["transaction_id"] for r in unknown) + ")" if unknown else "") +
+               f"; {len(later)} are later than the reporting date. Unknowns are excluded from numeric totals; owners must obtain their amounts. See the [complete current-month queue](#current-month-transaction-unresolved-queue).", "",
+               "Operations owner: review spending changes, owner escalations, disputed outcomes, and proposed actions before use. This draft records no stakeholder approval. "
+               "[Daily calculation evidence](#five-required-figures), [definitions](#calculation-definitions-and-limitations), and [fresh source metadata](#source-retrieval-metadata) support review.", ""]
+    out[4:4] = summary
+    return "\n".join(out), {label: signed(value) for label, value, _ in figures}, len(month_queue) + len(other_queue) + sum(r[0].startswith(("Material overage:", "Collected revenue interpretation")) for r in queue)
 
 
 def invalidate(output, reason):
@@ -426,20 +477,21 @@ def publish(output, data, report):
         os.replace(staging / "report.md", output / "report.md")
 
 
-def run(urls, reporting_date, prior_date, output, fetcher=None):
+def run(urls, reporting_date, prior_date, output, fetcher=None, *, meeting_date):
     output = Path(output)
     invalidate(output, "Run started; earlier deliverables invalidated pending complete fresh retrieval and validation.")
     try:
         with localcontext() as ctx:
             ctx.prec = 50
             require(len(urls) == 3 and len({sheet_identity(u) for u in urls}) == 3, "Supply exactly three distinct Google Sheets URLs")
+            iso_date(meeting_date)
             iso_date(reporting_date)
             iso_date(prior_date)
             tabs = []
             for url in sorted(urls, key=sheet_identity):
                 tabs.extend((fetcher or fetch_workbook)(url))
             data, metadata = normalize(tabs)
-            report, figures, unresolved_count = build_report(data, metadata, reporting_date, prior_date)
+            report, figures, unresolved_count = build_report(data, metadata, reporting_date, prior_date, meeting_date)
             for m in metadata:
                 print("SOURCE " + json.dumps(m, sort_keys=True), flush=True)
             publish(output, data, report)
@@ -462,6 +514,7 @@ def main():
             selected_output = sys.argv[index + 1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sources", nargs=3, required=True, metavar="GOOGLE_SHEETS_URL")
+    parser.add_argument("--meeting-date", required=True)
     parser.add_argument("--reporting-date", required=True)
     parser.add_argument("--prior-business-date", required=True)
     parser.add_argument("--output", default=default_output)
@@ -469,10 +522,10 @@ def main():
         args = parser.parse_args()
     except SystemExit as exc:
         if exc.code:
-            invalidate(Path(selected_output), "Command-line validation failed; rerun with three source URLs and two explicit dates.")
+            invalidate(Path(selected_output), "Command-line validation failed; rerun with three source URLs and three explicit dates.")
         raise
     try:
-        run(args.sources, args.reporting_date, args.prior_business_date, args.output)
+        run(args.sources, args.reporting_date, args.prior_business_date, args.output, meeting_date=args.meeting_date)
     except (ValidationError, OSError, ET.ParseError, InvalidOperation) as exc:
         print(f"FAILED: {exc}. Check the destination's failure marker; cleanup errors require operator attention.", file=sys.stderr)
         return 1

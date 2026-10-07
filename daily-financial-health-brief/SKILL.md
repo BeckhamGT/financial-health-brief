@@ -13,8 +13,9 @@ the operations owner makes financial decisions.
 
 1. Read [operating rules](references/operating-rules.md) for definitions, schemas,
    source roles, owner responsibilities and unresolved evidence.
-2. Confirm the reporting date and prior business date with the operator. Accept
-   three Google Sheets URLs; their ordering does not assign their roles.
+2. Confirm the operations meeting date, reporting date and prior business date
+   with the operator. Accept three Google Sheets URLs; their ordering does not
+   assign their roles.
 3. Read [runtime and access](references/runtime.md), verify session capture when
    required by the engagement, and run its end-to-end command from this skill root.
 4. Inspect the printed SOURCE records and the report's VALIDATED marker. A failed
