@@ -24,3 +24,18 @@ Create the Skill, implementation and outputs described in the formal assignment.
 - Use an Agent Skills-capable coding environment. Choose and document your implementation runtime and dependencies; no runtime or install command is supplied here.
 - Follow the [shared course guide for session capture](https://classroom.google.com/c/ODcyMjA4NTkwNDk2/m/ODc0NzI2NzQzMzQ2/details) and verify capture is active before implementation. Keep credentials out of the repository.
 - Meet the [stakeholder](https://work-sim.catalyte.ai/s/interview-r62mbg) to understand the work and relevant business sources. Read those online sources through their intended access route; an unavailable source is not permission to substitute repository data.
+
+## Implemented skill
+
+Read [daily-financial-health-brief/SKILL.md](daily-financial-health-brief/SKILL.md)
+to run the read-only workflow. The [runtime instructions](daily-financial-health-brief/references/runtime.md)
+include the complete live-source command, Python 3.9+/curl dependencies, access
+contract and failure behavior. [Operating rules](daily-financial-health-brief/references/operating-rules.md)
+document source meanings and calculations; [validation](daily-financial-health-brief/references/validation.md)
+describes the regression suite. Required outputs are under `deliverables/`.
+
+The original complete interview export is preserved under `interviews/`.
+Current capture uses Entire 0.11.3 checkpoint refs under `refs/entire/checkpoints/`,
+which differ from the course guide's `entire/checkpoints/v1` branch; capture
+configuration and existing history have been preserved. Financial reports remain
+drafts for operations-owner review.
