@@ -514,3 +514,44 @@ hooks matched their starting hashes; every prior checkpoint history remained an
 ancestor of its current ref. Remote publication evidence is checked after the
 normal commit and push. Entire's previously observed automatic source-identity
 redaction remains a capture limitation, not a successful exact remote identity match.
+
+
+### Remote publication verification
+
+Normal Git hooks created implementation commit
+[`abf50b22c3205ed2e13f8cf0152581fc1babdc28`](https://github.com/BeckhamGT/financial-health-brief/commit/abf50b22c3205ed2e13f8cf0152581fc1babdc28),
+linked by its trailer to checkpoint `01M4MSTD07VMZ16849X9W2TK0B` for actual build
+session `01a11761-440d-7862-8928-ce5db3214385`. Normal `git push origin main`
+succeeded and the Entire pre-push hook pushed three checkpoint refs (the new ref
+and existing backfilled refs), without force or configuration changes.
+
+An isolated temporary bare repository fetched main and all checkpoint refs from
+origin. Remote main equaled the implementation commit, and all seven checkpoint
+ref object IDs exactly matched local objects. Remote intended files matched local
+bytes, including the original interview's expected SHA-256. The prior revision
+remained an ancestor and its earlier original interview was readable unchanged.
+The remote report was the STALE / BLOCKED draft diagnostic and all three required
+usable CSV paths were absent, as required by the missing-evidence block.
+
+The fetched build checkpoint contained the current request and the real final-run
+`CommandExecution.stdout` (native line 1415, exit 1), with three SOURCE records,
+three SOURCE_READ records and one ASSESSMENT. Counts, tab identities, versions,
+hashes, fetch timestamps and the assessment matched the report. **Exact remote
+source-identity equality did not pass:** Entire 0.11.3 automatically changed the
+spreadsheet IDs and URL ID segments to `REDACTED` in the stored transcript. The
+native pre-condensation transcript matched the report exactly. No transcript was
+rewritten or reconstructed to conceal this supported-backend limitation.
+
+Historical operator evaluation session `01a117bb-d557-7f03-a3a0-2db7bf41af0d`
+was verified in fetched checkpoint `01M4BX9N5XZR5XQZYG0K8WDPH5`, session index 1,
+including its original operator request, actual source output and completed
+response (native task_complete line 89). It was already ended and required no
+manufactured finalization. It remains an October 7 evaluation preceding this new
+gate, not proof of current completeness or a newly evaluated financial success.
+
+A sandboxed checkpoint-list command warned that its checkpoint remote could not
+be reached and showed local records. Successful normal Git push plus fetched
+remote objects established Git checkpoint publication independently of that warning.
+Entire doctor subsequently reported installed/approved hooks and no stuck sessions.
+This publication record will itself be committed normally; it does not contain
+its own commit SHA. No Classroom submission or stakeholder/facilitator message was sent.
