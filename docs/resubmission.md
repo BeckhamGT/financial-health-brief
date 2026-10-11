@@ -751,9 +751,9 @@ repair request. Private grader expectations are not inferred.
 | Safe rendering, read-only workflow and human action boundary | Assignment draft/read-only boundaries; repair preservation instructions | Retained rendering regressions, scoped output writes, source-data handling and operating responsibilities | Satisfied |
 | Failed run cannot leave earlier outputs looking current | Assignment failure rule; repair step 8 | Real success → missing-assurance failure → path inspection → final fresh success; publication/cleanup regressions | Satisfied |
 | Deterministic reruns and independent current verification | Assignment programmatic reruns; repair step 8 | Identical CSV bytes/business findings on fresh reruns; independent final all-row reconciliation PASS | Satisfied |
-| Current-session capture, original backend/hooks and final actual SOURCE | Session-capture requirement; accepted facilitator feedback | Actual caller identity + native completed output line 2129; settings/hooks/previous refs unchanged | Satisfied locally; new checkpoint remote verification pending publication |
+| Current-session capture, original backend/hooks and final actual SOURCE | Session-capture requirement; accepted facilitator feedback | Final native completed output line 2334; supported checkpoint 01M4NYJNH5TGJQYP96XZK7MDB0 verified by isolated remote fetch | Satisfied locally and remotely; automatic identity redaction retained |
 | Actual learner review | Current repair step 9 | Draft/traced examples presented; learner initially requested corrections, then authorized publication if checks pass | Publication authorized; detailed figure/credit/threshold observations not supplied; no Operations approval |
-| Exact new submitted code and capture remotely present | Assignment submit/capture; current repair step 10 | Normal commit/push and isolated remote object/file checks to follow | Pending publication |
+| Exact new submitted code and capture remotely present | Assignment submit/capture; current repair step 10 | Normal hooks/push; isolated remote SHA/object verification and every intended file byte comparison | Satisfied for the repair commit recorded below; subsequent evidence-only commits retain those deliverables |
 
 ### Learner review and publication boundary for this repair
 
@@ -833,3 +833,54 @@ CommandExecution at line **2334** (16:59:45.385Z), exit 0. Its actual aggregated
 SOURCE records exactly equal report.md metadata. Original interview, configuration,
 hooks and all eight pre-existing checkpoint refs remain unchanged. Commit/push and
 isolated remote verification follow; no remote success is inferred from local capture.
+
+
+### Verified repair publication
+
+Code-and-deliverable revision:
+**0699993df484ea35f3fafa7a5956f3fc42e0004f**
+([commit](https://github.com/BeckhamGT/financial-health-brief/commit/0699993df484ea35f3fafa7a5956f3fc42e0004f)).
+Normal Git hooks added checkpoint **01M4NYJNH5TGJQYP96XZK7MDB0**, current build session
+**01a11761-440d-7862-8928-ce5db3214385**. Push exited 0; the normal Entire pre-push
+hook reported checkpoint refs synced to origin. No hook failure occurred.
+
+An isolated bare repository freshly fetched remote main and checkpoint refs.
+Remote main equaled the exact repair SHA. All fifteen intended changed files,
+required deliverables, original interview and discovery link matched local bytes.
+The report is **VALIDATED**, **Draft for human review**, with the supported original
+manager monthly assurance and pending financial review. The three CSVs contain
+70/10/25 independently reconciled recognized rows. Earlier history and all eight
+pre-existing checkpoint ref objects remain present unchanged remotely.
+
+The repair checkpoint remote object is
+**fa3e679c377f1b343a38099995c289f93c129acb**. Its session metadata identifies this actual
+build chat. Its stored native completed CommandExecution at line 2334 contains the
+actual final SOURCE output, exit 0, plus VERIFIED assessment and SUCCESS. The
+report's complete records matched native output before checkpoint condensation.
+Remote stored records match tab, role, count, timestamps, actual business versions,
+exported IDs and hashes; URL/spreadsheet identities are automatically REDACTED.
+This accepted redaction is preserved, not treated as missing execution or rewritten.
+The actual learner publication authorization is present at native line 2307.
+
+Historical operator evaluation session **01a117bb-d557-7f03-a3a0-2db7bf41af0d** remains
+in checkpoint **01M4BX9N5XZR5XQZYG0K8WDPH5**, session index 1. Isolated remote inspection
+verified its identity, original completion event and SOURCE output. This preserves
+that historical evaluation; it is not a new repair operator evaluation.
+
+One sandboxed local checkpoint-list command could not contact its remote and showed
+local results. Subsequent normal push and isolated remote Git object/content checks
+succeeded; no remote capture failure remains inferred from that listing warning.
+Configuration, backend, automatic redaction, hooks and original interview bytes are
+unchanged. No empty legacy capture branch, history rewrite or force push occurred.
+
+The financial draft is technically submission-ready. Remaining business questions:
+Operations/category owners must clarify TX-1025 and TX-1045 unknown amounts; the
+billing source owner must explain whether collected revenue is daily or cumulative;
+Operations must review the draft before financial actions. Detailed learner financial
+review observations were not supplied; the actual publication authorization is
+recorded separately. No private score/checkpoint satisfaction is promised.
+
+The evidence-only publication record will be committed normally after these checks;
+its own SHA is not embedded in itself. Final handoff identifies the final remote main
+SHA and report URL pinned to it. The facilitator/portal must assess that new SHA;
+selection by the grading portal has not been verified.
