@@ -555,3 +555,281 @@ remote objects established Git checkpoint publication independently of that warn
 Entire doctor subsequently reported installed/approved hooks and no stuck sessions.
 This publication record will itself be committed normally; it does not contain
 its own commit SHA. No Classroom submission or stakeholder/facilitator message was sent.
+
+
+## October 11 supported-success repair — prospective plan
+
+This plan is recorded before repair code changes. Start: local and freshly queried
+remote main `fb426c53439d3c530981bcce05ba658018e86d63`, no tracked modifications,
+existing untracked capture configuration preserved. The public assignment was read
+in Chrome earlier in this conversation and its full text was supplied by the learner.
+The starter README and Agent Skills specification were inspected again. The private
+Classroom capture guide is unavailable to the current tools; Chrome is no longer
+connected. This is a reference-access limitation, not a recording setup failure.
+Installed Entire 0.11.3 status/help/doctor and current native transcript verify this
+exact conversation `01a11761-440d-7862-8928-ce5db3214385`: current repair request and
+actual `PROJECT_A_SUPPORTED_REPAIR_CAPTURE_TEST_20261011` output, exit 0, native
+line 1832. The current native output field is `aggregated_output`; an initial check
+for only the older `stdout` field failed and was corrected without altering evidence.
+Backend git-refs and sync origin remain unchanged. Original latest interview hash
+matches `00ff6efe0fb8c18984c7ced6262b8c7ee4a30f7f90d82028164bc532b8af5bc9`.
+
+### Defect and minimum supported contract
+
+The unconditional completeness BLOCKED return and default verifier rejection make
+real successful publication impossible; mocked gate successes did not demonstrate
+the complete workflow. Missing CSVs and a diagnostic are not a completed submission.
+Retain all financial calculations, source-text rendering protections, source-row
+preservation, queue partitions and stale-output invalidation.
+
+The original manager messages at 01:56–01:57 identify the Operations-owned ledger
+URL, the August 2026 reporting context, and explicitly state that Operations supplies
+the complete transaction ledger for the month. This is the available business
+assurance for the supplied monthly ledger. It does not identify an approved version,
+signature, account list, confirmation cell or separate approval procedure. Requiring
+such an invented artifact caused the unsupported blanket block.
+
+Bind that documented assurance to the unchanged original export, its SHA-256,
+actual manager statements, disclosed ledger URL and month. Store only this grounded
+operating contract in a focused reference; it is not business-data caching. Missing,
+altered, unsupported or mismatched assurance must block. Keep observed versions
+separate: require a usable ledger version and unchanged full fresh reads during the
+attempt; never label an observed version Operations-approved. Full workbook retrieval
+and normalized-row coverage are technical checks. Repeated hashes/counts are not
+independent business assurance. Human review of the resulting draft remains pending.
+Other sources/months require applicable real assurance, not an unexplained bypass.
+
+### Focused plan and prospective estimate
+
+| Repair | Smallest necessary changes | Verification | Prospective effort |
+| --- | --- | --- | --- |
+| Supported completeness success/failure | Grounded assurance reference/loader; real gate uses evidence identity/scope, full-read and version consistency; include assessment in successful report/stdout | First reproduce real-pipeline failure; real-gate success and evidence/read/version failure tests without gate mocks | 45–90 min |
+| Restore independent financial verification | Verifier independently checks assurance/report/read records, then uses retained independent rows/calculations/queues | All-tab fresh reconciliation and malformed/mismatch tests, no production calculation imports | 30–60 min |
+| Align reusable operator instructions | Small SKILL/README/reference corrections; preserve canonical discovery link | Format validation, actual loading/use and relative command | 20–40 min |
+| Current outputs and review/publication | Fresh success, independent reads, deterministic rerun, controlled failure then final success; learner review; normal commit/hooks and isolated remote fetch | Actual command exit/output/capture and every required file verified | 30–60 min plus human/network waits |
+
+Total prospective technical effort: about **2–4 hours**, not measured development
+or human-review time. No cost/savings/ROI figures are inferred. The learner reports
+that the facilitator confirmed recording and older unchanged scores/zero tokens
+came from older-commit selection; no current portal SHA selection is assumed.
+
+### Requirement-to-evidence status before repair
+
+| Requirement | Evidence | Status |
+| --- | --- | --- |
+| Original interview/history/capture backend | Exact original hash, current raw transcript and preserved Git refs/hooks | satisfied |
+| Canonical skill, executable code and focused references | Existing package and discovery link; prior validator/catalog observations | satisfied structure; current use pending |
+| Fresh three-source reads, field-derived roles, safe rendering/failure, exact calculations/row preservation | Existing scripts and useful tests | retained; repaired live path pending |
+| Supported complete-source assurance and successful real gate | Explicit original Operations monthly-ledger statement; current gate always BLOCKED | pending implementation |
+| Three normalized CSVs and financial draft/five figures | Current paths missing CSVs; diagnostic report | missing |
+| Independent current financial reconciliation/determinism | Current verifier rejects all financial drafts | pending repair and fresh runs |
+| Actual learner review and new remote submission revision | No new draft observations or new SHA yet | pending |
+
+Known business uncertainty: collected revenue is a dated snapshot but daily versus
+cumulative meaning remains unresolved; this limits interpretation, not the supported
+snapshot comparison. Unknown amounts stay blank, excluded and queued. No Work Sim
+access, interview automation, source edits, financial actions or communications are
+part of this repair. Publication must wait for actual successful live outputs and
+learner review; the final new SHA must be assessed instead of an old revision.
+
+### Supported-success repair — actual implementation and validation
+
+The real pre-fix synthetic pipeline reached `assess_completeness` and raised
+CompletenessError even with well-formed stable exports. The unconditional BLOCKED
+return and downstream test mocks were the confirmed regression. No inference is
+made about which private grading checkpoints caused the score.
+
+Implemented the smallest supported evidence path: `references/ledger-assurance.json`
+cites three existing manager statements (Operations ownership/disclosed URL,
+August 2026 scope, complete monthly ledger and invalidating conditions) and the
+unchanged original export SHA-256. This is an operating citation, not a fabricated
+approval field or cached transaction input. The real gate checks the original bytes
+and manager-message excerpts, source/month binding, one observed current-month
+ledger version, all declared exported sheets and consistent complete fresh reads.
+It rejects missing/invalid citations, wrong scopes/sources, mixed versions,
+missing/partial reads and observed content/version changes. No particular version
+is described as Operations-approved. Human draft review remains separate.
+
+The full-workbook reader now records populated/empty inventory entries and rejects
+omitted populated tabs even when the same omission appears twice. Incomplete XLSX
+relationships fail parsing. Export-local IDs remain distinct from native Google gids.
+Upstream omissions yielding internally valid identical exports cannot be disproved
+technically; business completeness depends on the manager's monthly-ledger assurance.
+There is no independently approved historical version baseline. Another source/month
+requires applicable genuine assurance; `--ledger-assurance` supplies a citation,
+not a bypass. Operations must clarify any withdrawal or change of that premise.
+
+Retained Decimal calculations, signed credits, strict materiality, source-text
+rendering protection, extra business fields/provenance, all-period row preservation,
+complete partitioned queues and stale-output cleanup. Restored independent financial
+verification with its own XLSX parser and integer-cent spend calculations; no
+production imports. README, skill and focused operating references now describe
+conditional financial success instead of an always-blocked workflow.
+
+Actual validation on October 11:
+
+- **56 tests passed** (39 production tests, 17 independent-verifier tests). Successful
+  calculation/publication tests no longer mock completeness. A full synthetic
+  network-XLSX-parser-to-publication test uses the real gate. Missing/altered evidence,
+  learner text pretending to be manager assurance, source/scope/version mismatch,
+  incomplete workbook/omitted tab, allowed unknowns and success-then-failure are covered.
+  Existing signed/date/MTD/materiality/rendering/queue/publication/cleanup coverage remains.
+- Official `agentskills validate daily-financial-health-brief`: valid. Executable
+  script, relative reference targets and repository-relative discovery link verified.
+  The actual chat's skill catalog lists the canonical package. Current work read and
+  followed that package and its live command; no new independent fresh operator
+  session is claimed. The earlier operator session remains historical evidence.
+- Optional scan-agent-skill wrapper: exit 127 because pinned skill-scanner is absent.
+  No dependency installation or external scanning/upload occurred. Manual inspection
+  checked GET-only authorized Sheets export destinations, no credential access,
+  source-as-data rendering, scoped output writes and human financial boundaries.
+  This is not a security certification or clean automated scan.
+- First repaired live run: exit 0; six fresh workbook requests, all required outputs.
+  Independent fresh all-tab reads matched every recognized field and physical row,
+  all five figures, each budget category/predicate/owner/rule, revenue snapshot pairs
+  and other metrics, all queue IDs/amount states, and stdout/report metadata/assessment.
+- Fresh reruns produced identical bytes for all three normalized CSVs and identical
+  complete financial findings before the retrieval-metadata section; fetch times changed.
+- Controlled missing-assurance run after success: six fresh reads, exit 1, all prior
+  required CSVs removed and report marked STALE / BLOCKED. No SUCCESS or usable
+  financial figures remained. This was deliberately invalid test evidence, not a
+  discovery that the supported real assurance is missing.
+- Final successful recovery run: documented command unchanged, exit **0**, started
+  **2026-10-11T16:35:29.341527+00:00**, finished **2026-10-11T16:35:31.716480+00:00**,
+  measured wall time **2.374806625 seconds**, including interpreter, six live requests,
+  validation, calculations and publication. Runtime: Python **3.9.6**, curl **8.7.1**;
+  standard-library Python, no production package/credential dependencies.
+- Final independent fresh reconciliation: **PASS**, reads at
+  **2026-10-11T16:35:33.636184–16:35:34.377915 UTC**, all 70/10/25 rows and five signed
+  figures matched. Source business hashes/versions were unchanged between production,
+  reruns and independent reads. Current-month queue: 18 = 12 pending + 6 disputed;
+  16 known + 2 unknown, no later-dated or other-period open rows in this live evidence.
+- Exact final first-read records: Transaction ledger, 70 rows,
+  **2026-10-11T16:35:29.712359+00:00**, ledger-2026-08-11-v2;
+  Revenue snapshot, 25 rows, **2026-10-11T16:35:30.221639+00:00**, dated versions
+  August 3/5/7/10 v1 and August 11 v2;
+  Budget targets, 10 rows, **2026-10-11T16:35:30.600836+00:00**, budget-2026-08-v3.
+  Complete URL/tab/export-ID/hash/version metadata and second-read timestamps appear
+  in report.md and actual SOURCE/SOURCE_READ stdout, not merely written claims.
+- Entire current caller session remains **01a11761-440d-7862-8928-ce5db3214385**, Codex
+  gpt-6.1-sol, active; `entire doctor` reports hooks OK and no stuck sessions.
+  Installed `session info --transcript` native line **2129**, timestamp
+  **2026-10-11T16:35:31.720Z**, is the completed CommandExecution, exit 0. Its actual
+  `aggregated_output` contains final SOURCE records exactly equal to report metadata.
+  Command text was inspected separately and is not used as proof of execution.
+  Original interview/configuration/hook checksums and all eight pre-existing checkpoint
+  refs match the repair baseline. Automatic redaction is retained.
+
+Measured machine runtime is distinct from agent work, development effort and human
+review. The prospective 2–4-hour estimate above was a planning estimate, not measured
+elapsed effort. Monetary cost, revision-specific token cost, human review time,
+savings and ROI are unmeasured. The model was not changed to manufacture evidence.
+
+The learner reports that the facilitator confirmed capture worked and that earlier
+unchanged scores/zero-token observations came from resubmissions selecting an older
+commit. This is learner-reported feedback; no claim is made that the portal selected
+this forthcoming revision. The facilitator/portal must assess the new full SHA,
+not the older October 6 revision or the blocked `fb426c5` revision.
+
+### Current repair requirement-to-evidence table
+
+Sources: the learner-supplied Project A assignment (also linked in README), public
+starter README, Agent Skills specification, original manager interview and current
+repair request. Private grader expectations are not inferred.
+
+| Public requirement / repair condition | Authoritative basis | Current evidence | Status |
+| --- | --- | --- | --- |
+| Original complete learner interview | Assignment Interview records; learner export/hash instructions | interviews/interview-r62mbg-20261011-0558.md; original SHA-256 unchanged, prior exports retained in history | Satisfied |
+| Named portable skill, executable scripts, focused references | Assignment deliverables; Agent Skills specification | SKILL.md, scripts/brief.py, focused references; official validator and resolving discovery link | Satisfied |
+| Runtime, dependencies, relative end-to-end command | Assignment task/runtime contract | README and references/runtime.md; actual Python 3.9.6/curl 8.7.1 live command | Satisfied |
+| Fresh three view-only inputs; field-derived roles; validate every populated tab | Assignment live-source requirement; manager 01:55–01:57 | Six fresh complete workbook reads per success, SOURCE/SOURCE_READ, all-tab reader tests and independent fresh reads | Satisfied |
+| Supported business completeness, scope and observed version consistency | Manager 01:56 ownership/scope and 01:57 monthly-ledger declaration; current repair step 3 | Grounded original citation, real conditional gate, actual VERIFIED assessment; no version-approval claim | Satisfied within August/source assurance and documented export limitations |
+| Three required normalized CSVs, exact columns and all recognized rows | Assignment required CSVs | normalized transactions/budget/revenue: 70/10/25 rows; all fields and provenance independently matched | Satisfied |
+| Draft financial report and five exact signed figures | Assignment report figures; interview status/date/amount rules | VALIDATED report.md, management summary + five traceable figures; independent integer-cent agreement | Satisfied |
+| MTD/category allocation, strict materiality, credits, unknowns, owners/rules | Original manager rules; current repair steps 6–8 | Every category/predicate in report; boundary/sign/zero tests; independent category comparison; unknowns blank | Satisfied |
+| Revenue comparisons, unresolved items and limitations | Assignment traceable report; manager snapshot/queue rules | Paired dated balances/revenue and other metrics; 18 unique open IDs/2 unknowns; later/other-period separation | Satisfied; collected daily/cumulative meaning remains unresolved |
+| Safe rendering, read-only workflow and human action boundary | Assignment draft/read-only boundaries; repair preservation instructions | Retained rendering regressions, scoped output writes, source-data handling and operating responsibilities | Satisfied |
+| Failed run cannot leave earlier outputs looking current | Assignment failure rule; repair step 8 | Real success → missing-assurance failure → path inspection → final fresh success; publication/cleanup regressions | Satisfied |
+| Deterministic reruns and independent current verification | Assignment programmatic reruns; repair step 8 | Identical CSV bytes/business findings on fresh reruns; independent final all-row reconciliation PASS | Satisfied |
+| Current-session capture, original backend/hooks and final actual SOURCE | Session-capture requirement; accepted facilitator feedback | Actual caller identity + native completed output line 2129; settings/hooks/previous refs unchanged | Satisfied locally; new checkpoint remote verification pending publication |
+| Actual learner review | Current repair step 9 | Draft/traced examples presented; learner initially requested corrections, then authorized publication if checks pass | Publication authorized; detailed figure/credit/threshold observations not supplied; no Operations approval |
+| Exact new submitted code and capture remotely present | Assignment submit/capture; current repair step 10 | Normal commit/push and isolated remote object/file checks to follow | Pending publication |
+
+### Learner review and publication boundary for this repair
+
+The current management summary and five exact figures were presented with material
+positive overages, strict insurance/marketing boundary examples, training's negative
+variance, paired revenue/balance changes and the complete 18-item queue. Review prompts
+trace August 11 ledger rows 21,22,66–69, TX-1066's -75 credit, unknown TX-1025/TX-1045,
+and Finance's pending refund TX-1011. At this point no new learner observations have
+been received. Learner review is **pending**, not assumed checked or approved.
+Historical comments are not presented as review of this repair. Operations' financial
+approval remains pending; the report is a draft.
+
+The learner then answered the management-summary review prompt:
+
+> I do want corrections before committing and pushing
+
+At that point this was the only new review observation received. It does not specify the
+corrections and is not approval of the figures, credit, unknowns, thresholds or
+stakeholder use. A concise follow-up asks which wording, figures, completeness
+explanation, layout or unresolved-item handling should change. **Commit and push were
+held** pending clarification and a subsequent publication decision. The intended changes
+were staged before this reply arrived; no new commit or push has occurred.
+
+Technical draft-deliverable checks pass locally. Submission/publication is pending
+learner-requested corrections and remote verification of the eventual new revision.
+The currently published fb426c5 revision still contains the older blocked diagnostic;
+it must not be presented as this successful local repair.
+
+
+### October 11 publication authorization and final checks
+
+The learner clarified “you said management summary”. The agent identified that
+opening section and suggested optional clearer grouping of budget risks, open items,
+and revenue/review responsibilities. This was an agent readability suggestion, not
+a learner-reported factual defect or an implemented correction. The learner then
+said:
+
+> if everything is good then commit and push
+
+This supersedes the earlier publication hold, conditional on successful checks.
+No specific management-summary rewrite was requested or implemented. The existing
+summary remains the validated one. This authorization is not a detailed learner
+reconciliation, Operations' approval of the financial draft, or approval of a
+particular ledger version. Detailed learner observations remain unavailable and
+stakeholder financial review remains pending.
+
+Before publication, all **56 tests** passed again, official skill validation passed,
+and the staged diff passed whitespace checking. Remote main still matched the
+previous published fb426c53439d3c530981bcce05ba658018e86d63, with no remote divergence.
+The unchanged documented live command ran successfully again, followed by fresh
+independent all-tab reconciliation **PASS**. Every row/field/provenance, five signed
+figures, category comparison, revenue pair/other metric and queue membership matched.
+All three normalized CSV bytes and financial findings remain identical to earlier
+fresh repaired runs.
+
+This final publication run supersedes the earlier recovery-run timestamps above:
+start **2026-10-11T16:59:39.247343+00:00**, finish
+**2026-10-11T16:59:45.381788+00:00**, actual exit **0**, measured end-to-end runtime
+**6.134343625 seconds**. Six fresh view-only workbook requests are included. This
+single observation is not a performance guarantee, workflow-time saving or monetary
+cost estimate.
+
+| Source tab | Recognized business rows | Final first-read UTC timestamp | Actual versions |
+| --- | --- | --- | --- |
+| Transaction ledger | 70 | 2026-10-11T16:59:42.550308+00:00 | ledger-2026-08-11-v2 |
+| Budget targets | 10 | 2026-10-11T16:59:44.019863+00:00 | budget-2026-08-v3 |
+| Revenue snapshot | 25 | 2026-10-11T16:59:43.303826+00:00 | revenue-2026-08-03/05/07/10-v1; revenue-2026-08-11-v2 |
+
+Final independent reads occurred at **2026-10-11T16:59:47.535564–16:59:48.219511 UTC**;
+versions, counts and source hashes matched. The original manager citation passed
+business assurance; complete export inventory and observed version consistency
+passed separately. Human review remains pending in the assessment/report.
+
+Current Entire session **01a11761-440d-7862-8928-ce5db3214385** contains the actual
+publication authorization at native line **2307** (16:58:49.508Z) and final completed
+CommandExecution at line **2334** (16:59:45.385Z), exit 0. Its actual aggregated_output
+SOURCE records exactly equal report.md metadata. Original interview, configuration,
+hooks and all eight pre-existing checkpoint refs remain unchanged. Commit/push and
+isolated remote verification follow; no remote success is inferred from local capture.

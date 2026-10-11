@@ -16,18 +16,14 @@ data, missing counterpart snapshots, unknown/numeric conflicts; fetch denial;
 missing CLI arguments/bad dates; publication/cleanup failure; stale-output removal after
 successful runs; native date cells, sparse row identities and spreadsheet errors.
 
-After regression tests, run the live command in `runtime.md` again. Under the current
-unresolved Operations completeness contract, expect a nonzero result, no required
-CSVs and a STALE / BLOCKED diagnostic. Verify actual SOURCE, SOURCE_READ and
-ASSESSMENT records against the report and independent fresh view-only reads. Check
-unknown amounts remain permitted unresolved evidence, rather than a reason to infer
-missing ledger rows. Test fixtures never substitute for production source evidence.
-
-The October 11 continuation adds an explicit completeness/version-usability gate.
-All successful financial runs described below predate its enforcement and remain
-historical evidence only. They do not establish Operations-confirmed completeness
-or permission to reuse old financial outputs. Current actual validation and missing
-business-evidence questions belong in `../../docs/resubmission.md`.
+After tests, run the documented live command in runtime.md. Successful tests must
+use the real completeness function; synthetic network responses are allowed only
+in tests. Missing/altered original manager evidence, wrong source/month, conflicting
+monthly versions, changed exports, omitted populated sheets and malformed/missing
+sources must prevent publication. Retain regression coverage for rendering, signed
+credits, unknown exclusions, strict boundaries and success-then-failure cleanup.
+Current actual results belong in `../../docs/resubmission.md`; the historical runs
+below remain historical and are never production inputs.
 
 The canonical synthetic financial baseline is documented in `../eval/`. Its values
 are deliberately different from the live assignment's values so hard-coded
@@ -119,80 +115,41 @@ coverage from any new all-tab verifier results.
 
 ## Revision verification procedure
 
-Record actual results in `../../docs/resubmission.md`. Planning and review recorded
-for this revision must not be presented as events preceding the original build.
+Record actual results in `../../docs/resubmission.md`, separately from estimates and
+historical planning/review.
 
-1. Run the regression command above. Keep useful existing coverage and add focused
-   tests for changed behaviors: safe source-text presentation while preserving CSV
-   values, readable and partitioned queues, publication/storage failure recovery,
-   complete independent source inventory/metadata comparison, and a blocked
-   completeness gate. Exercise changed/missing/partial read evidence and verify
-   valid unknown amounts remain allowed. Synthetic calculation fixtures are not
-   production approvals or an invented completeness schema.
-2. Run the full live command in runtime.md from the skill root. Keep actual SOURCE
-   stdout visible; use a temporary log outside the repository only as verification
-   input, never as cached primary business input or a submitted session-log substitute.
-3. Invoke `python3 scripts/reconcile_live.py` with the same three `--sources`,
-   `--meeting-date`, `--reporting-date`, `--prior-business-date`,
-   `--output ../deliverables`, plus `--run-log "$run_log" --verify-blocked` for the
-   current diagnostic. Its fresh third read of all three workbooks must
-   independently inspect populated tabs and source identities/versions/rows, exact
-   stdout/report metadata and the blocked assessment. Do not present a diagnostic
-   reconciliation as validation of financial deliverables. Once a supported
-   completeness contract permits financial publication, reconcile all original
-   business fields, source URL/tab/physical row, required headers, five daily sums,
-   every budget category/predicate/owner/rule, paired revenue and other metrics,
-   queue identities/amount states and exact metadata. The verifier must not import
-   production calculation functions. Report its actual coverage and limitations.
-   A diagnostic pass reports `independent_blocked_verification: PASS` and
-   `financial_reconciliation: NOT_PERFORMED`; it leaves business completeness
-   UNVERIFIED and the confirmation contract UNSUPPORTED. Default financial mode
-   rejects an unconfirmed financial draft, including historical valid-looking
-   outputs. A blocked-evidence pass does not make the ledger financially usable.
-4. Compare fresh production runs for stable business content and assessment reasons;
-   a blocked run must have no required CSVs. For future usable financial runs,
-   compare normalized CSV bytes and business findings. Fetch timestamps may differ.
-   If source versions/content changed between reads, identify the change and run
-   again with fresh evidence rather than force a match to an older snapshot.
-5. Use synthetic success-then-failure regressions in temporary outputs to check
-   cleanup. After a controlled failure on the real destination, inspect every required
-   output path; historical valid-looking artifacts must not remain usable.
-   Confirm stale marking/removal or the documented quarantine instruction if storage
-   access prevents changes. Follow runtime.md recovery; then rerun live, independently
-   inspect the resulting evidence/assessment and recorded SOURCE output. The
-   unresolved completeness contract must still block financial outputs; do not
-   manufacture a successful final financial run. Record the blocker until resolved.
-6. Measure the final end-to-end production subprocess wall time, including retrieval,
-   validation and diagnostic publication; include calculations/financial publication
-   only when those steps actually run. Keep agent usage, development effort and
-   human review time separate. The interview's approximately one-hour manual baseline
-   and prior measured machine runtime do not establish complete-workflow time savings;
-   unavailable costs remain unknown.
+1. Run the full regression suite, including successful full publication through the
+   real completeness function and XLSX reader. No test may mock completeness VERIFIED.
+2. Run the full live command from runtime.md. Keep SOURCE, SOURCE_READ and ASSESSMENT
+   stdout visible; a temporary external log is verification input only, never cached
+   primary business data. Require the actual program exit 0 and SUCCESS.
+3. Run `python3 scripts/reconcile_live.py` with the same three `--sources`, dates,
+   `--output ../deliverables` and `--run-log /path/to/actual-run.log`. Default financial
+   mode freshly reads every populated tab with its own XLSX parser and no production
+   imports. It independently verifies original assurance, full inventory, row fields,
+   provenance/headers, five integer-cent figures, every budget allocation/variance/
+   strict predicate/owner/rule, revenue pairs/other metrics, queues/amount states and
+   exact stdout/report audit/read/assessment records. It fails if sources drift.
+   `--verify-blocked` checks only missing/invalid-assurance diagnostics and cannot
+   establish financial success; other failures require inspection of their reasons.
+4. Rerun production with fresh retrieval, comparing all normalized CSV bytes and
+   business findings for unchanged evidence. Permit timestamps to change. If business
+   sources change, identify the change and rerun without forcing old results.
+5. After success, induce a controlled failure and inspect all required paths. Earlier
+   CSVs must be removed and report marked stale, or the documented quarantine response
+   required if storage forbids both marking/removal. Then perform a final successful
+   live run and fresh independent reconciliation so required outputs are current.
+6. Measure actual end-to-end subprocess wall time including retrieval, validation,
+   calculations and publication. Separate it from agent/development/human-review time.
+   Costs, savings and ROI remain unmeasured unless evidence supplies them.
+7. Inspect the exact current Entire transcript for actual final SOURCE output matching
+   report.md. Normal commit/push hooks preserve linkage; remotely inspect exact code
+   and checkpoint objects. Automatic URL redaction is retained and reported accurately.
 
-When using tee in **zsh**, preserve both process statuses immediately:
-
-```zsh
-set -o pipefail
-run_log=$(mktemp "${TMPDIR:-/tmp}/project-a-live.XXXXXX")
-```
-
-Run the complete runtime.md command, appending `2>&1 | tee "$run_log"`, then
-immediately execute:
-
-```zsh
-run_statuses=("${pipestatus[@]}")
-brief_status=${run_statuses[1]}
-tee_status=${run_statuses[2]}
-printf 'PROGRAM_EXIT=%s LOG_EXIT=%s LOG=%s\n' "$brief_status" "$tee_status" "$run_log"
-```
-
-The status capture belongs immediately after the production pipeline, before any
-other command overwrites `pipestatus`. A current BLOCKED run is expected to return
-nonzero; record that actual result and inspect its diagnostic. Financial use requires
-both statuses zero and supported completeness evidence.
-In bash, capture `PIPESTATUS` immediately and use indexes 0 and 1 instead. A logging
-failure is not proof of a production failure; either failure requires investigation
-before relying on the recorded run. Do not infer brief.py success from tee's exit.
+If using tee, preserve the program and logging exit statuses immediately with zsh
+`pipestatus` (indexes 1/2) or bash `PIPESTATUS` (indexes 0/1). Tee success alone is not
+program success. A streaming subprocess harness returning the child status and using
+`time.perf_counter()` is also suitable; it must keep actual stdout visible.
 
 ## Skill and human evaluation
 
@@ -214,13 +171,13 @@ an explicit skill request with the three live URLs, all three dates, financial b
 read-only boundaries and human draft review. Supply neither expected live totals nor
 intended fixes. Observe source use, uncertainties, output review and permission
 boundaries, including refusal to turn technical consistency into completeness proof
-or to invent a production approval. The current appropriate handoff is a blocked
-diagnostic and precise Operations clarification, not a financial conclusion.
+or to invent a production approval. A supported monthly assurance permits a
+financial draft; a failed condition requires a specific stale diagnostic.
 If only a subagent/manual package read is possible, describe it accurately
 as that form of evaluation and leave fresh-host loading unverified.
 
-For a blocked run, review the source evidence, assessment and exact missing
-completeness questions with the learner. Do not infer approval or specific review
+For a blocked run, review source evidence, assessment and its exact failed conditions
+with the learner. Do not infer approval or specific review
 observations. After a usable financial draft is possible, present it in small groups:
 trace a figure to source rows, inspect a credit, retain an unknown, inspect a strict
 boundary and check a queue

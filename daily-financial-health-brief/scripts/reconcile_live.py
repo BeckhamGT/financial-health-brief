@@ -8,6 +8,7 @@ Financial verification cannot pass without a supported Operations confirmation
 contract. --verify-blocked checks only the diagnostic and its technical evidence.
 """
 import argparse
+import calendar
 import csv
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, localcontext
@@ -39,8 +40,8 @@ FIGURES = ['Reporting-date posted total', 'Reporting-date pending-confirmed tota
 VALID_STATUS = 'Run status: **VALIDATED**. Currency for spend/budget figures: USD. Unknown amounts remain unknown.'
 BLOCKED_TITLE = '# STALE / BLOCKED — no usable financial brief'
 BLOCKED_DRAFT = '**Draft diagnostic for human review**'
-COMPLETENESS_GAPS = ['missing_operations_confirmation', 'unsupported_confirmation_contract',
-                     'unknown_confirmation_scope', 'unknown_approved_source_version']
+COMPLETENESS_GAPS = ['missing_or_invalid_monthly_assurance']
+DEFAULT_ASSURANCE = Path(__file__).resolve().parents[1] / 'references/ledger-assurance.json'
 
 
 def check(condition, message):
@@ -108,7 +109,7 @@ def read_workbook(payload, url, fetched_at):
             for item in xml('xl/_rels/workbook.xml.rels'):
                 check(item.get('TargetMode') != 'External', 'External workbook relationship unsupported')
                 relationships[item.get('Id')] = item.get('Target')
-            tabs, titles = [], set()
+            tabs, titles, inventory = [], set(), []
             for sheet in book.findall(NS + 'sheets/' + NS + 'sheet'):
                 title = sheet.get('name')
                 check(title and title not in titles, 'Missing/duplicate native tab title')
@@ -148,6 +149,7 @@ def read_workbook(payload, url, fetched_at):
                         cells[column] = value
                     if any(value.strip() for value in cells.values()):
                         physical.append((row_number, [cells.get(column, '') for column in range(1, max(cells) + 1)]))
+                inventory.append((title, sheet.get('sheetId'), sheet.get('state', 'visible'), bool(physical)))
                 if not physical:
                     continue
                 physical.sort(key=lambda item: item[0])
@@ -157,6 +159,8 @@ def read_workbook(payload, url, fetched_at):
                 check(headers and all(headers) and len(headers) == len(set(headers)), 'Blank/duplicate header in ' + title)
                 tabs.append({'url': url, 'spreadsheet_id': identity, 'tab': title, 'exported_tab_id': sheet.get('sheetId'),
                              'fetched_at': fetched_at, 'headers': headers, 'rows': physical[1:]})
+            for tab in tabs:
+                tab['workbook_inventory'] = tuple(inventory)
             check(tabs, 'Workbook has no populated tabs: ' + url)
             return tabs
     except (BadZipFile, ET.ParseError, KeyError, IndexError, TypeError, OverflowError) as exc:
@@ -423,26 +427,15 @@ def verify_blocked_result(report, run_log, fresh, data, output, reporting_date, 
               'Second read must have its own later fetch timestamp')
     assessment = structured_section(report, 'Completeness assessment')
     check(assessment == assessment_records[0] and isinstance(assessment, dict), 'ASSESSMENT stdout does not exactly match diagnostic assessment')
-    check(set(assessment) == {'status', 'business_completeness', 'transport_consistency', 'amount_certainty',
-                              'requested_meeting_date', 'publication'} and
-          assessment['status'] == 'BLOCKED', 'Unsupported/incorrect blocked completeness assessment')
+    check(assessment.get('status') == 'BLOCKED' and assessment.get('human_review') == 'PENDING', 'Incorrect blocked assessment/review state')
     business = assessment['business_completeness']
     scope = {'reporting_date': reporting_date, 'prior_business_date': prior_date, 'budget_period': reporting_date[:7]}
-    ledger_versions = sorted({row['source_version'] for row in data['transactions']})
-    expected_business = {'status': 'UNVERIFIED', 'reason_codes': COMPLETENESS_GAPS,
-                         'required_scope': scope, 'observed_ledger_versions': ledger_versions}
-    check(isinstance(business, dict) and set(business) == set(expected_business) |
-          {'responsible_owner', 'confirmation_contract', 'extra_transaction_fields', 'interpretation'} and
-          all(business[key] == value for key, value in expected_business.items()),
-          'Missing confirmation/scope/approved-version assessment differs or claims completeness')
-    extras = sorted(set().union(*(row.keys() for row in data['transactions'])) - set(FIELDS['transactions']) - set(ORIGIN))
-    check(business['responsible_owner'] == 'Operations team / transaction-ledger source owner' and
-          business['extra_transaction_fields'] == extras and
-          isinstance(business['confirmation_contract'], str) and business['confirmation_contract'].startswith('Not supplied:') and
-          isinstance(business['interpretation'], str) and bool(business['interpretation']),
-          'Unsupported confirmation contract or source field inventory in assessment')
+    ledger_versions = sorted({row['source_version'] for row in data['transactions'] if row['date'][:7] == reporting_date[:7]})
+    check(business['status'] == 'UNVERIFIED' and business['reason_codes'] == COMPLETENESS_GAPS and
+          business['required_scope'] == scope and business['observed_ledger_versions'] == ledger_versions and
+          business['evidence'] is None, 'Missing/invalid monthly assurance differs or claims business completeness')
     transport = assessment['transport_consistency']
-    check(isinstance(transport, dict) and set(transport) == {'status', 'checks', 'issues', 'limitation'} and
+    check(isinstance(transport, dict) and set(transport) == {'status', 'checks', 'issues', 'limitation', 'exported_workbooks'} and
           transport['status'] == 'CONSISTENT_OBSERVED_EXPORTS' and
           isinstance(transport['checks'], list) and transport['issues'] == [] and
           isinstance(transport['limitation'], str) and bool(transport['limitation']),
@@ -460,9 +453,70 @@ def verify_blocked_result(report, run_log, fresh, data, output, reporting_date, 
           isinstance(publication['required_next_step'], str) and bool(publication['required_next_step']),
           'Blocked assessment must prohibit financial publication and preserve the requested meeting date')
     return {'independent_blocked_verification': 'PASS', 'financial_reconciliation': 'NOT_PERFORMED',
-            'business_completeness': 'UNVERIFIED', 'confirmation_contract': 'UNSUPPORTED',
+            'business_completeness': 'UNVERIFIED', 'confirmation_contract': 'MISSING_OR_INVALID',
             'reason_codes': list(COMPLETENESS_GAPS), 'fresh_rows': {role: len(rows) for role, rows in data.items()},
             'fresh_unknown_transaction_ids': unknown_ids}
+
+
+def verify_assured_publication(report, run_log, data, fresh, reporting_date, prior_date, meeting_date, assurance_path=None, fresh_tabs=None):
+    """Independently check original evidence and publication records, without production imports."""
+    path = Path(assurance_path or DEFAULT_ASSURANCE).resolve()
+    citation = json.loads(path.read_text(encoding='utf-8'))
+    check(set(citation) == {'kind', 'period', 'source_url', 'interview', 'sha256', 'statements'} and
+          citation['kind'] == 'operations-monthly-ledger-v1', 'Unsupported monthly assurance citation')
+    original = (path.parent / citation['interview']).resolve().read_bytes()
+    check(hashlib.sha256(original).hexdigest() == citation['sha256'], 'Original interview checksum differs')
+    manager = re.findall(r'(?ms)^\*\*Finance and Operations Manager\*\*[^\n]*\n(.*?)(?=^\*\*[^*\n]+\*\*|\Z)', original.decode('utf-8'))
+    quotes = citation['statements']
+    check(set(quotes) == {'owner', 'scope', 'monthly'} and all(any(quote in message for message in manager) for quote in quotes.values()), 'Assurance must cite original manager messages')
+    check('owned by the Operations team' in quotes['owner'] and citation['source_url'] in quotes['owner'], 'Owner/ledger relationship missing')
+    month = iso_day(citation['period'] + '-01')
+    check(calendar.month_name[month.month] + ' ' + str(month.year) in quotes['scope'], 'Manager scope differs from assurance month')
+    check('Operations provides the complete transaction ledger for the month.' in quotes['monthly'] and all(term in quotes['monthly'] for term in ('change in the ledger version', 'partial read', 'missing source', 'cannot support a financial conclusion')), 'Owner assurance/invalidation conditions missing')
+    check(reporting_date[:7] == prior_date[:7] == citation['period'], 'Requested dates outside manager-assured month')
+    check({record['url'] for record in fresh if record['role'] == 'transactions'} == {citation['source_url']}, 'Assured ledger URL differs from freshly read transaction source')
+    versions = sorted({row['source_version'] for row in data['transactions'] if row['date'][:7] == reporting_date[:7]})
+    check(len(versions) == 1, 'Conflicting monthly ledger versions')
+    repeated, emitted, stage = [], [], 0
+    for line in run_log.splitlines():
+        if line.startswith('SOURCE '):
+            check(stage == 0, 'SOURCE records out of order')
+        elif line.startswith('SOURCE_READ '):
+            check(stage <= 1, 'SOURCE_READ records out of order')
+            stage = 1
+            repeated.append(json.loads(line[12:]))
+        elif line.startswith('ASSESSMENT '):
+            check(stage == 1, 'Assessment must follow all source reads')
+            stage = 2
+            emitted.append(json.loads(line[11:]))
+        elif line.startswith('SUCCESS '):
+            check(stage == 2, 'Publication success must follow assessment')
+            stage = 3
+    check(stage == 3 and len(emitted) == 1 and repeated, 'Missing actual repeated reads/assessment/success')
+    check(repeated == structured_section(report, 'Exact source read records') and
+          all(set(item) == {'round', 'source'} and item['round'] == 2 for item in repeated), 'Repeated read stdout/report differs')
+    primary, second = index_metadata(metadata_from_report(report)), index_metadata([item['source'] for item in repeated])
+    match_fresh_metadata(second, index_metadata(fresh))
+    match_fresh_metadata(primary, second)
+    check(all(datetime.fromisoformat(second[key]['fetched_at']) > datetime.fromisoformat(primary[key]['fetched_at']) for key in primary), 'Repeated read timestamp must be later')
+    assessment = structured_section(report, 'Completeness assessment')
+    check(assessment == emitted[0] and assessment['status'] == 'VERIFIED' and assessment['human_review'] == 'PENDING' and
+          assessment['requested_meeting_date'] == meeting_date, 'Assessment stdout/report or review state differs')
+    business = assessment['business_completeness']
+    check(business['status'] == 'SUPPORTED' and business['reason_codes'] == business['issues'] == [] and
+          business['evidence'] == citation and business['observed_ledger_versions'] == versions and
+          business['required_scope'] == {'reporting_date': reporting_date, 'prior_business_date': prior_date, 'budget_period': reporting_date[:7]}, 'Unsupported business completeness claim')
+    transport = assessment['transport_consistency']
+    check(transport['status'] == 'CONSISTENT_OBSERVED_EXPORTS' and transport['issues'] == [] and
+          set(transport['checks']) == {'each_requested_workbook_read_twice', 'exported_tab_inventory', 'populated_tab_identity', 'physical_business_rows_and_headers', 'business_content_and_observed_source_versions'}, 'Technical read checks missing or failed')
+    if fresh_tabs is not None:
+        inventories = {tab['url']: [list(entry) for entry in tab['workbook_inventory']] for tab in fresh_tabs}
+        check(transport['exported_workbooks'] == [dict(url=url, tabs=inventory) for url, inventory in sorted(inventories.items())], 'Fresh complete export inventory differs from production')
+    amounts = assessment['amount_certainty']
+    check(amounts['unknown_amounts_permitted'] is True and amounts['blocking'] is False and
+          amounts['unknown_transaction_ids'] == sorted(row['transaction_id'] for row in data['transactions'] if row['amount_status'] == 'unknown'), 'Unknown amounts differ or improperly block completeness')
+    check(assessment['publication']['financial_report'] is True and assessment['publication']['normalized_csvs'] is True, 'Financial publication not permitted by verified evidence')
+    return {'business_assurance': 'SUPPORTED_ORIGINAL_MANAGER_MONTHLY_DECLARATION', 'observed_ledger_versions': versions, 'human_review': 'PENDING'}
 
 
 def base_status(row):
@@ -505,7 +559,7 @@ def reconcile_report(report, data, meeting_date, reporting_date, prior_date):
         allocation, posted = cents(budget['budget_amount']), total(rows, 'posted')
         variance = posted - allocation
         # Integer multiplication retains strict 10% precision without division.
-        pct, fixed = abs(variance) * 10 > allocation, abs(variance) > 50000
+        pct, fixed = abs(variance) * 10 > abs(allocation), abs(variance) > 50000
         expected = [budget['category'], budget['owner'], money(allocation), money(posted), money(variance), money(Decimal(allocation) / 10), 'yes' if pct else 'no', 'yes' if fixed else 'no', money(-variance), money(total(rows, 'pending')), money(total(rows, 'disputed')), 'yes' if pct and fixed else 'no', budget['review_rule']]
         check(shown == dict(zip(headers, expected)), 'Category amount/strict predicates/owner/rule differs: ' + budget['category'])
     is_open = lambda r: base_status(r) in {'pending', 'disputed'} or r['amount_status'] == 'unknown'
@@ -558,7 +612,7 @@ def reconcile_report(report, data, meeting_date, reporting_date, prior_date):
     return {'independent_reconciliation': 'PASS', 'five_signed_USD': list(map(money, values)), 'current_month_unresolved': len(current_queue), 'other_period_unresolved': len(other_queue), 'unknown_current_month': unknown, 'rows': {role: len(rows) for role, rows in data.items()}}
 
 
-def reconcile(sources, meeting_date, reporting_date, prior_date, output, run_log, reader=None, verify_blocked=False):
+def reconcile(sources, meeting_date, reporting_date, prior_date, output, run_log, reader=None, verify_blocked=False, ledger_assurance=None):
     """Reader injection is tests-only; CLI always makes fresh viewer requests."""
     check(len(sources) == 3 and len({sheet_id(url) for url in sources}) == 3, 'Three distinct viewer sources required')
     iso_day(meeting_date)
@@ -579,10 +633,14 @@ def reconcile(sources, meeting_date, reporting_date, prior_date, output, run_log
             print(json.dumps(result, sort_keys=True), flush=True)
             return result
         report_structure(report)
-        # The latest interview requires actual Operations confirmation, its scope
-        # and its approved ledger version. No source representation/accepted
-        # mapping has been established, so legacy VALIDATED markers are insufficient.
-        check(False, 'Financial reconciliation unavailable: no supported Operations completeness-confirmation contract; legacy or unconfirmed financial drafts cannot pass')
+        compare_csvs(output, data)
+        log = run_log.read_text(encoding='utf-8')
+        compare_metadata(report, log, metadata)
+        assurance = verify_assured_publication(report, log, data, metadata, reporting_date, prior_date, meeting_date, ledger_assurance, all_tabs)
+        result = reconcile_report(report, data, meeting_date, reporting_date, prior_date)
+        result.update(assurance)
+        print(json.dumps(result, sort_keys=True), flush=True)
+        return result
 
 
 def main():
@@ -593,12 +651,13 @@ def main():
     parser.add_argument('--prior-business-date', required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--run-log', type=Path, required=True)
+    parser.add_argument('--ledger-assurance', type=Path, default=DEFAULT_ASSURANCE)
     parser.add_argument('--verify-blocked', action='store_true',
                         help='Verify the STALE / BLOCKED missing-confirmation diagnostic and fresh source evidence; does not verify financial conclusions')
     args = parser.parse_args()
     try:
         reconcile(args.sources, args.meeting_date, args.reporting_date, args.prior_business_date, args.output, args.run_log,
-                  verify_blocked=args.verify_blocked)
+                  verify_blocked=args.verify_blocked, ledger_assurance=args.ledger_assurance)
     except (ValueError, OSError, InvalidOperation, KeyError, TypeError) as exc:
         # Source-origin errors remain one quoted diagnostic line in capture.
         # Newlines/ANSI controls cannot forge SOURCE, SUCCESS or approval output.

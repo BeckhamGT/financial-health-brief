@@ -69,36 +69,36 @@ amounts. Preserve these values, exclude them from numeric totals and retain thei
 clarification queue entries. Do not substitute zero, estimates or exclusions that
 hide unresolved rows.
 
-Before a usable financial run, Operations must establish:
+The minimum supported business assurance is the original manager's declaration:
+“Operations provides the complete transaction ledger for the month.” The same
+message identifies changed version, partial read and missing source as invalidating
+conditions. The preceding manager messages identify Operations ownership, the
+ledger URL and August 2026 scope. The original export is preserved unchanged;
+`ledger-assurance.json` cites those messages and its SHA-256. The loader checks actual
+manager statements, original bytes, URL and month. It does not invent approval
+columns, confirmation cells, account lists, signatures or an approved version.
 
-- Where its completeness confirmation is represented in the actual ledger and
-  how that representation can be retrieved through intended view-only access.
-- What values mean confirmed completeness, who provides that evidence, and how
-  it differs from ordinary transaction status or amount confirmation.
-- Which source version is approved and how the confirmation links to that version.
-- The covered dates/month, accounts and other scope, plus the conditions that
-  invalidate confirmation after a source change or partial read.
+The manager also says evidence/confirmations are recorded in the ledger, but defines
+no separate machine approval schema. Treating that absence as an unconditional block
+was an implementation regression. The available monthly-ledger declaration is the
+business assurance; fetched transactions provide business values, not permissions.
+For other months/sources, obtain applicable actual owner assurance and cite the
+complete original export rather than extrapolating this August declaration.
 
-None of the field names, approval values, approved-version identifiers or complete
-account scope is specified by the interview. The October 11 live inspection found
-one transaction tab with the eleven required transaction headers and no extra
-confirmation fields in the export. The native metadata response did not expose the
-requested owner/version confirmation fields. No confirmation was verified; that
-response cannot establish whether confirmation exists elsewhere in the source.
-This identifies unresolved evidence, not a rule that a particular row count proves
-completeness.
+Full technical retrieval is separate: visit every declared exported worksheet,
+including hidden/empty sheets, validate all populated business content and compare
+two fresh full reads. Reject missing sources/sheet parts, omitted populated tabs,
+inventory/physical-row/header/content/version changes and conflicting monthly ledger
+versions. Preserve other-period row versions without using them as the current
+month's version. Stable count/hash or two identical exports alone do not prove
+business completeness; upstream omissions cannot be disproved by this export route.
+The owner declaration supplies the business premise. No particular observed version
+is described as owner-approved, and there is no independently approved historical
+baseline. If Operations withdraws assurance or changes scope, require new evidence.
 
-The current implementation blocks usable financial publication until that actual
-source-defined contract is clarified and supported. It performs two fresh reads of
-every supplied workbook and compares exported tab inventory, headers, physical rows,
-business values and source versions. Technical consistency can detect a changed
-export; two identical partial exports can still be incomplete. A source version,
-stable count, hash, successful fetch or repeated read does not replace Operations
-confirmation. No approval field, production attestation or manual override is
-invented. See runtime.md for the blocked diagnostic and recovery procedure.
-An established source-owner completeness confirmation would be business-usability
-evidence under that explicit contract. It would not grant tool permission, approve
-spending or replace stakeholder review of the resulting draft.
+Unknown, pending and disputed rows do not invalidate completeness. Human review
+remains pending even after a VERIFIED completeness assessment and VALIDATED financial
+draft. Source assurance grants neither tool permission nor financial-action authority.
 
 ## Calculations
 
@@ -157,9 +157,9 @@ does not prove completeness or an unstated business freshness SLA.
 | --- | --- | --- |
 | Operator request and input confirmation | Operator supplies URLs, meeting/reporting/prior dates and draft boundaries; agent repeats them for confirmation | Explicit inputs; reporting month determines budget period |
 | Fresh retrieval | Deterministic code reads every supplied view-only workbook; operator handles access errors | Visible SOURCE records identify all populated recognized tabs and fetched business rows |
-| Validation and completeness | Code validates rows and repeated-read consistency; Operations defines and supplies ledger completeness confirmation tied to scope/version | Current unresolved confirmation contract yields BLOCKED diagnostics; no financial conclusions or required CSVs publish |
+| Validation and completeness | Code checks original manager monthly assurance plus full reads and observed versions | Matching URL/month/checksum/manager statements, complete inventories and consistent current-month version; failures invalidate outputs |
 | Calculations and report | Code performs exact Decimal selection, sums and strict comparisons; agent explains results and uncertainty | Reconciled CSVs, five signed figures, budget predicates, dated snapshots and queues |
-| Clarification | Category owners handle transaction evidence; Operations supplies the missing completeness contract and confirmation | Unknown amounts stay unresolved; supported evidence handling and fresh rerun are required before financial use |
+| Clarification | Category owners handle transaction evidence; Operations clarifies missing or changed business assurance/scope | Unknown amounts stay unresolved; supported evidence handling and fresh rerun are required before financial use |
 | Human review | Learner records their actual review; operations owner decides spending, dispute outcomes and escalations | Draft remains a draft until the responsible stakeholder approves its use |
 | Revision publication | Operator authorizes publication; agent stages intended changes and runs normal Git hooks | Code revision and linked recorded checkpoint are verified remotely |
 
@@ -209,9 +209,9 @@ and original export; it does not enter or operate the interview service.
    duplicate identities and comparable snapshot keys. The operator supplies the
    business-day dates; the program does not maintain a holiday calendar. The
    reporting month selects the budget period, so there is no conflicting period input.
-3. Assess source-owner completeness and version/scope linkage before financial
-   publication. The current unresolved contract stops with a blocked diagnostic
-   and no normalized CSVs. Only supported evidence permits the financial steps below.
+3. Assess the original manager monthly-ledger assurance, URL/month scope and
+   observed version consistency before financial publication. A failed condition
+   stops with a stale diagnostic and no usable CSVs; report its exact reason.
 4. Calculate exact-date totals and inclusive posted MTD with Decimal. Compare
    absolute variance directly with 10% of allocation and USD 500: no division,
    including zero allocation. Show each predicate independently; equality fails
@@ -247,15 +247,14 @@ results are in validation.md and the revision record; a mechanism or historical
 pass does not prove that a new run succeeded. The private grader's unreported
 checkpoints are unknown.
 
-Financial reconciliation entries below describe retained coverage and historical
-checks. This continuation verifies the blocked diagnostic; it does not publish or
-independently reconcile current financial conclusions.
+Entries identify mechanisms; dated current results and learner review are recorded
+in docs/resubmission.md. Historical checks do not establish a current successful run.
 
 | Requirement | Implementation | Verification |
 | --- | --- | --- |
 | Portable Agent Skills package, relative command | SKILL.md; scripts/brief.py; references/runtime.md | Frontmatter, relative paths, executable and observed host-loading checks |
 | Fresh three view-only inputs, field-derived roles | fetch_workbook, parse_workbook, normalize | fetch contract and reordered-column/URL regression tests; independent fresh all-tab workbook inspection |
-| Complete Operations ledger and usable version/scope evidence | Repeated-read assessment plus blocked completeness gate | Missing-contract/version-drift failure checks; source-owner confirmation remains unresolved |
+| Complete Operations ledger and usable version/scope evidence | Original manager monthly citation plus conditional completeness gate | Real full-pipeline success and missing/invalid evidence, scope, version and partial-read regressions |
 | Required CSV columns and all recognized rows | SCHEMAS, normalize, publish | row preservation, credits, unknowns, extra fields; independent source-row comparison |
 | Five exact signed figures and evidence | build_report management summary and daily table | Decimal regression baseline and independent integer-cent live sums |
 | Every category, strict materiality, owner rules | budget comparison table, risks, review queue | both signs/equalities/zero-baseline tests; independent category reconciliation |

@@ -7,8 +7,9 @@ description: "Use when an operator requests a daily financial health or budget r
 
 Check whether live transaction rows, monthly budget allocations and dated revenue
 snapshots support a draft. Operations confirms ledger completeness; the operations
-owner reviews the draft and decides financial actions. Currently the completeness
-confirmation contract is unresolved.
+owner reviews the draft and decides financial actions. The original manager
+assures the supplied August monthly ledger; its traceable citation is checked
+separately from complete fresh reads and observed version consistency.
 
 ## Workflow
 
@@ -21,10 +22,11 @@ confirmation contract is unresolved.
    its full command from this skill root. Verify recording when required by the
    engagement. Every production attempt freshly reads all three supplied URLs.
 4. Inspect SOURCE, SOURCE_READ, ASSESSMENT, actual exit status and report. Consistent
-   repeated reads do not prove completeness. The current unsupported Operations
-   confirmation contract produces BLOCKED, a stale draft diagnostic and no required
-   CSVs. Present its evidence and precise clarification needs; do not supply an
-   approval schema/value or override. Use runtime's recovery procedure after failure.
+   repeated reads alone do not prove completeness. The checked original manager
+   citation must match the ledger and month; full workbook reads and versions must
+   also pass. Success requires exit 0, SUCCESS, all three CSVs and a VALIDATED draft.
+   Any failed condition invalidates prior outputs. Explain its exact cause and use
+   runtime's recovery procedure; never invent approval or bypass evidence.
 5. Only after supported completeness evidence permits a VALIDATED financial draft,
    present the management summary, five exact signed figures, budget findings,
    paired revenue/balances and complete unresolved queues for human review. Keep
@@ -53,7 +55,7 @@ confirmation contract is unresolved.
 Run the synthetic regression suite described in [validation](references/validation.md).
 Fixtures enter tests only; the production command accepts live Google URLs only.
 Independently reconcile fresh source and assessment evidence. A final usable live
-financial run remains blocked until its completeness contract is supported. The
+financial run must pass its original-evidence and technical checks. The
 normal command writes local drafts or diagnostics; publishing to Git
 requires the user's authorization. Host loading/evaluation evidence is recorded only
 after it is actually observed.

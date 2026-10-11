@@ -1,0 +1,12 @@
+{
+  "kind": "operations-monthly-ledger-v1",
+  "period": "2026-08",
+  "source_url": "https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8",
+  "interview": "../../interviews/interview-r62mbg-20261011-0558.md",
+  "sha256": "00ff6efe0fb8c18984c7ced6262b8c7ee4a30f7f90d82028164bc532b8af5bc9",
+  "statements": {
+    "owner": "The evidence and confirmations are recorded in the Transaction ledger, which is owned by the Operations team.\n\n- [Transaction ledger](https://docs.google.com/spreadsheets/d/16HhjfR9uG1oUwSFNjQvAvU9Q9gVjzxL0ufBzTJe82v8)",
+    "scope": "The reporting period covers August 11, 2026, compared with the prior business day, August 10, and the current budget for August 2026.",
+    "monthly": "Operations provides the complete transaction ledger for the month. Any change in the ledger version, a partial read or a missing source means the ledger cannot support a financial conclusion."
+  }
+}

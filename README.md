@@ -9,9 +9,11 @@ The operations owner reviews the draft and decides financial actions.
 Use Python **3.9+** and **curl** on PATH. Python uses only its standard library;
 the public view-only export route needs no credentials, packages or cached inputs.
 Confirm the three source URLs and meeting, reporting and prior business dates first.
-Operations must also supply verifiable ledger completeness evidence, including its
-scope and link to the approved source version. The current interview establishes
-that requirement but does not specify its representation or approved version.
+The manager's original interview assures that Operations supplies the complete
+monthly ledger. [The operating citation](daily-financial-health-brief/references/ledger-assurance.json)
+binds that statement to the disclosed ledger, August 2026 scope and original export
+checksum. It does not assert approval of a particular version. The implementation
+separately checks full fresh reads, observed versions and content consistency.
 Load [the canonical skill](daily-financial-health-brief/SKILL.md); supported host
 loading and the repository-relative discovery link are described in
 [runtime and access](daily-financial-health-brief/references/runtime.md#load-the-skill).
@@ -35,23 +37,18 @@ process exit status and `report.md` before using outputs. Each attempt freshly r
 all three workbooks twice to check exported content/version consistency. Consistent
 reads, row counts and hashes do not establish Operations-confirmed completeness.
 
-**Current business-evidence blocker:** the October 11 interview continuation places
-completeness confirmation in the Operations-owned transaction ledger. Its live
-export has no extra confirmation fields, and the native metadata response did not
-expose the requested owner/version confirmation fields. No confirmation was verified;
-that response cannot prove none exists. Its representation, scope and approved-version
-linkage remain unresolved. The
-program therefore exits nonzero, removes the required CSVs and publishes a
-**STALE / BLOCKED** draft diagnostic containing source records and the assessment;
-it publishes no usable financial figures. Do not invent an approval value or use a
-manual override. Resolve the [specific evidence questions](daily-financial-health-brief/references/operating-rules.md#ledger-completeness-and-usability)
-with Operations before adding support for that evidence contract.
+Success requires exit status 0, `SUCCESS`, all three normalized CSVs and a
+**VALIDATED** report labeled **Draft for human review**. The completeness assessment
+records its original interview evidence, month, ledger URL, observed version and
+full exported-tab inventory. A missing/invalid citation, another month/source,
+conflicting or changed versions, missing/partial retrieval, invalid business rows
+or failed publication prevents usable outputs. See the
+[completeness contract](daily-financial-health-brief/references/operating-rules.md#ledger-completeness-and-usability).
 
-After that contract is established and implemented, a usable financial run must
-require a **VALIDATED** report labeled **Draft for human review**, matching source
-metadata, the required CSVs and accepted completeness evidence. Stakeholder
-approval remains separate. Prior successful financial runs are historical evidence.
-On failure, treat prior artifacts as stale and follow the
+Another reporting month/source requires applicable real source-owner assurance;
+`--ledger-assurance` supplies its traceable original-interview citation, never an
+approval or bypass flag. Human permission to publish is not business assurance.
+Source-owner financial review remains pending. On failure, follow the
 [recovery procedure](daily-financial-health-brief/references/runtime.md#failure-and-recovery).
 
 | Path | Purpose |
@@ -61,8 +58,8 @@ On failure, treat prior artifacts as stale and follow the
 | `daily-financial-health-brief/references/operating-rules.md` | Business rules, responsibilities, privacy and source-data boundaries |
 | `daily-financial-health-brief/references/runtime.md` | Full command, loading, source audit and failure recovery |
 | `daily-financial-health-brief/references/validation.md` | Tests, independent reconciliation and historical validation |
-| `deliverables/normalized/{transactions,budget,revenue}.csv` | Required usable outputs after completeness passes; withheld while blocked |
-| `deliverables/report.md` | Current blocked/failed diagnostic; financial draft only after the completeness gate can pass |
+| `deliverables/normalized/{transactions,budget,revenue}.csv` | All recognized rows, with source URL/tab/physical-row provenance |
+| `deliverables/report.md` | Validated financial draft on success; unmistakably stale diagnostic on failure |
 | `interviews/*.md` | Complete original interview export for each interview session |
 | `docs/resubmission.md` | This revision's plan, actual decisions, validation and learner review |
 
@@ -77,10 +74,10 @@ python3 -m unittest discover -s scripts -p 'test_*.py' -v
 Tests use synthetic in-memory data and temporary outputs. Production always reads
 the supplied live URLs again. Follow [validation](daily-financial-health-brief/references/validation.md)
 for independent source reconciliation, deterministic reruns and a controlled
-failure/recovery check. Under the current unresolved completeness contract, verify
-the blocked diagnostic, its source evidence and absence of usable CSVs. A final
-successful financial run and review of a traced figure, signed credit, unknown,
-strict threshold and owner queue entry must wait for supported completeness evidence.
+failure/recovery check. Successful tests use the real completeness function, not a
+mocked VERIFIED result. Before handoff, run the documented live command and fresh
+independent reconciliation. Review a traced figure, signed credit, unknown,
+strict threshold and owner queue entry.
 Learner comments and corrections belong in the revision record; operations-owner
 approval remains a separate responsibility.
 
@@ -101,8 +98,9 @@ This installation uses Entire 0.11.3 checkpoint refs under
 is a different format. Preserve the installed configuration, Git history and
 checkpoint refs; use installed help for supported sync and remote inspection.
 After committing with normal hooks, verify linkage to the current recorded session
-and verify both code and capture data remotely. Facilitator access to the modern
-format may require clarification; an empty legacy branch provides no capture evidence.
+and verify both code and capture data remotely. The learner reports that the facilitator confirmed capture worked. Preserve
+automatic redaction; verify actual current-session/checkpoint content and remote
+objects for each new revision. An empty legacy branch provides no capture evidence.
 The [course capture guide](https://classroom.google.com/c/ODcyMjA4NTkwNDk2/m/ODc0NzI2NzQzMzQ2/details)
 is the course reference.
 

@@ -3,6 +3,7 @@ import contextlib
 import copy
 import csv
 import io
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -47,7 +48,7 @@ def fixture_tabs():
     for i, (role, values, title) in enumerate(zip(brief.SCHEMAS, [tx, budgets, revenue], ["Revenue name", "Ledger name", "Budget name"])):
         headers = brief.SCHEMAS[role] + (["business_note"] if role == "transactions" else [])
         result.append(brief.Tab(URLS[i], "fixture_" + str(i), title, "1", "2026-10-06T12:00:00+00:00", headers,
-                                [(row + 2, value) for row, value in enumerate(values)]))
+                                [(row + 2, value) for row, value in enumerate(values)], ((title, "1", "visible", True),)))
     return result
 
 
@@ -55,21 +56,70 @@ def fake_fetch(tabs):
     return lambda url: [copy.deepcopy(t) for t in tabs if t.url == url]
 
 
+def fixture_assurance(root):
+    """Synthetic manager export and traceable contract; never production input."""
+    statements = {
+        "owner": "The evidence and confirmations are recorded in the Transaction ledger, which is owned by the Operations team.\n\n- [Transaction ledger](" + URLS[0] + ")",
+        "scope": "The reporting period covers August 11, 2026, compared with the prior business day, August 10, and the current budget for August 2026.",
+        "monthly": "Operations provides the complete transaction ledger for the month. Any change in the ledger version, a partial read or a missing source means the ledger cannot support a financial conclusion.",
+    }
+    export = root / "synthetic-interview.md"
+    export.write_text("\n\n".join("**Finance and Operations Manager** · Voice · 01:57 AM\n\n" + text for text in statements.values()))
+    contract = root / "ledger-assurance.json"
+    contract.write_text(json.dumps(dict(kind="operations-monthly-ledger-v1", period="2026-08", source_url=URLS[0], interview=export.name,
+                                        sha256=hashlib.sha256(export.read_bytes()).hexdigest(), statements=statements)))
+    return contract
+
+
 class BriefTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.output = Path(self.temporary.name) / "deliverables"
         self.tabs = fixture_tabs()
+        self.assurance = fixture_assurance(Path(self.temporary.name))
         self.addCleanup(self.temporary.cleanup)
 
     def successful_run(self, tabs=None, urls=None):
         capture = io.StringIO()
-        # Calculation/publication regressions isolate their pre-existing behavior.
-        # This explicit test-only mock is not Operations confirmation evidence and
-        # is unavailable through the production CLI or source schema.
-        with contextlib.redirect_stdout(capture), patch.object(brief, "assess_completeness", return_value={"status": "VERIFIED", "basis": "TEST ONLY: completeness guard mocked for isolated downstream regression"}):
-            result = brief.run(urls or URLS, DAY, PRIOR, self.output, fake_fetch(tabs or self.tabs), meeting_date="2026-08-12")
+        with contextlib.redirect_stdout(capture):
+            result = brief.run(urls or URLS, DAY, PRIOR, self.output, fake_fetch(tabs or self.tabs), meeting_date="2026-08-12", ledger_assurance=self.assurance)
         return result, capture.getvalue()
+
+    def test_real_pipeline_publishes_using_monthly_assurance_without_mocking_gate(self):
+        result, stdout = self.successful_run()
+        self.assertEqual(result["preserved_rows"]["transactions"], 10)
+        assessment = json.loads(next(line[11:] for line in stdout.splitlines() if line.startswith("ASSESSMENT ")))
+        self.assertEqual(assessment["status"], "VERIFIED")
+        self.assertEqual(assessment["business_completeness"]["status"], "SUPPORTED")
+        self.assertEqual(assessment["human_review"], "PENDING")
+        self.assertIn("Run status: **VALIDATED**", (self.output / "report.md").read_text())
+        for role in brief.SCHEMAS:
+            self.assertTrue((self.output / "normalized" / (role + ".csv")).exists())
+
+    def test_full_network_export_parser_to_publication_uses_real_completeness(self):
+        from test_reconcile_live import xlsx
+        calls = []
+        def network(command, **kwargs):
+            url = next(url for url in URLS if brief.sheet_identity(url) in command[-1])
+            calls.append(url)
+            workbook = [dict(tab=t.title, exported_tab_id=t.tab_id, headers=t.headers, rows=t.rows) for t in self.tabs if t.url == url]
+            return subprocess.CompletedProcess(command, 0, xlsx(workbook), b"")
+        with patch.object(brief.subprocess, "run", side_effect=network), contextlib.redirect_stdout(io.StringIO()) as stream:
+            result = brief.run(URLS, DAY, PRIOR, self.output, meeting_date="2026-08-12", ledger_assurance=self.assurance)
+        self.assertEqual(calls, sorted(URLS) * 2)
+        self.assertEqual(list(result["figures"].values()), ["+150.15", "+20.20", "+10.10", "+100.00", "+50.15"])
+        self.assertEqual(stream.getvalue().count("ASSESSMENT "), 1)
+
+    def test_incomplete_xlsx_relationship_fails_before_publication(self):
+        from test_reconcile_live import xlsx
+        payload = xlsx([dict(tab=t.title, exported_tab_id=t.tab_id, headers=t.headers, rows=t.rows) for t in self.tabs if t.url == URLS[0]])
+        truncated = io.BytesIO()
+        with ZipFile(io.BytesIO(payload)) as source, ZipFile(truncated, "w") as target:
+            for name in source.namelist():
+                if not name.startswith("xl/worksheets/"):
+                    target.writestr(name, source.read(name))
+        with self.assertRaises(brief.ValidationError):
+            brief.parse_workbook(truncated.getvalue(), URLS[0], "fixture_0", "2026-10-11T00:00:00+00:00")
 
     def read_csv(self, role):
         with (self.output / "normalized" / (role + ".csv")).open(newline="") as f:
@@ -80,12 +130,12 @@ class BriefTests(unittest.TestCase):
         for role in brief.SCHEMAS:
             self.assertFalse((self.output / "normalized" / (role + ".csv")).exists())
 
-    def blocked_run(self, tabs=None, fetcher=None):
+    def blocked_run(self, tabs=None, fetcher=None, assurance=None):
         """Exercise the real completeness gate; no test approval or bypass here."""
         capture = io.StringIO()
         with contextlib.redirect_stdout(capture), patch.object(brief, "build_report", side_effect=AssertionError("Financial rendering must not run")), patch.object(brief, "publish", side_effect=AssertionError("Usable CSV publication must not run")):
             with self.assertRaises(brief.CompletenessError):
-                brief.run(URLS, DAY, PRIOR, self.output, fetcher or fake_fetch(tabs or self.tabs), meeting_date="2026-08-12")
+                brief.run(URLS, DAY, PRIOR, self.output, fetcher or fake_fetch(tabs or self.tabs), meeting_date="2026-08-12", ledger_assurance=assurance or Path(self.temporary.name) / "missing-assurance.json")
         self.assert_invalidated()
         stdout = capture.getvalue()
         records = [json.loads(line[7:]) for line in stdout.splitlines() if line.startswith("SOURCE ")]
@@ -122,7 +172,7 @@ class BriefTests(unittest.TestCase):
         self.assertEqual(business["status"], "UNVERIFIED")
         self.assertEqual(business["observed_ledger_versions"], ["v1"])
         self.assertEqual(business["required_scope"], {"reporting_date": DAY, "prior_business_date": PRIOR, "budget_period": "2026-08"})
-        self.assertEqual(set(business["reason_codes"]), {"missing_operations_confirmation", "unsupported_confirmation_contract", "unknown_confirmation_scope", "unknown_approved_source_version"})
+        self.assertEqual(set(business["reason_codes"]), {"missing_or_invalid_monthly_assurance"})
 
     def test_unknown_amount_is_valid_and_not_completeness_failure_cause(self):
         data, metadata = brief.normalize(self.tabs)
@@ -151,11 +201,10 @@ class BriefTests(unittest.TestCase):
                 assessment, _, _, _ = self.blocked_run(tabs=tabs)
                 business = assessment["business_completeness"]
                 self.assertEqual(business["status"], "UNVERIFIED")
-                self.assertIn("unsupported_confirmation_contract", business["reason_codes"])
-                self.assertIn("unknown_confirmation_scope", business["reason_codes"])
-                self.assertIn("unknown_approved_source_version", business["reason_codes"])
+                self.assertIn("missing_or_invalid_monthly_assurance", business["reason_codes"])
                 self.assertEqual(business["observed_ledger_versions"], ["v1"])
-                self.assertIn("approved_version", business["extra_transaction_fields"])
+                self.assertIsNone(business["evidence"])
+                self.successful_run(tabs=tabs)  # Sheet claims neither grant nor revoke real manager assurance.
 
     def test_known_partial_or_wrong_source_read_retains_audit_and_blocks(self):
         for problem in ("missing", "wrong_identity"):
@@ -192,7 +241,7 @@ class BriefTests(unittest.TestCase):
                         elif change == "content":
                             tabs[0].rows[3][1][5] = "201.20"
                         elif change == "empty_tab":
-                            tabs[0].workbook_inventory = ((tabs[0].title, "1", "visible"), ("Additional empty exported tab", "8", "hidden"))
+                            tabs[0].workbook_inventory = ((tabs[0].title, "1", "visible", True), ("Additional empty exported tab", "8", "hidden", False))
                         elif change == "physical_row":
                             _, values = tabs[0].rows[-1]
                             tabs[0].rows[-1] = (100, values)
@@ -200,22 +249,67 @@ class BriefTests(unittest.TestCase):
                             tabs[0].headers.reverse()
                             tabs[0].rows = [(n, list(reversed(v))) for n, v in tabs[0].rows]
                     return tabs
-                assessment, _, _, _ = self.blocked_run(fetcher=fetch)
+                assessment, _, _, _ = self.blocked_run(fetcher=fetch, assurance=self.assurance)
                 self.assertTrue(all(count == 2 for count in calls.values()))
                 self.assertEqual(assessment["transport_consistency"]["status"], "FAILED")
                 codes = {i["code"] for i in assessment["transport_consistency"]["issues"]}
                 self.assertIn("exported_tab_inventory_changed" if change == "empty_tab" else "source_content_or_version_changed", codes)
 
-    def test_identical_valid_looking_partial_exports_do_not_prove_completeness(self):
+    def test_missing_declared_populated_tab_blocks_even_identical_reads(self):
         tabs = fixture_tabs()
-        tabs[0].rows = [r for r in tabs[0].rows if r[1][0] in {"PRIOR", "CURRENT", "UNKNOWN"}]
-        assessment, records, _, _ = self.blocked_run(tabs=tabs)
-        self.assertEqual(next(r["data_rows"] for r in records if r["role"] == "transactions"), 3)
-        self.assertEqual(assessment["transport_consistency"]["status"], "CONSISTENT_OBSERVED_EXPORTS")
-        self.assertEqual(assessment["business_completeness"]["status"], "UNVERIFIED")
-        self.assertIn("Identical exports can both be partial", assessment["transport_consistency"]["limitation"])
+        tabs[0].workbook_inventory += (("Omitted populated sheet", "8", "hidden", True),)
+        assessment, _, _, _ = self.blocked_run(tabs=tabs, assurance=self.assurance)
+        self.assertEqual(assessment["business_completeness"]["status"], "SUPPORTED")
+        self.assertEqual(assessment["transport_consistency"]["status"], "FAILED")
+        self.assertIn("partial_populated_tab_read", {issue["code"] for issue in assessment["transport_consistency"]["issues"]})
 
-    def test_real_completeness_failure_after_test_only_success_removes_outputs(self):
+    def test_assurance_hash_scope_source_and_versions_are_checked(self):
+        original = self.assurance.read_text()
+        for change, code in [("hash", "missing_or_invalid_monthly_assurance"), ("scope", "missing_or_invalid_monthly_assurance"),
+                             ("source", "missing_or_invalid_monthly_assurance"), ("version", "missing_or_conflicting_monthly_ledger_version")]:
+            with self.subTest(change=change):
+                contract, tabs = json.loads(original), fixture_tabs()
+                if change == "hash":
+                    contract["sha256"] = "0" * 64
+                elif change == "scope":
+                    contract["period"] = "2026-09"
+                elif change == "source":
+                    contract["source_url"] = URLS[1]
+                else:
+                    tabs[0].rows[3][1][9] = "v2"
+                self.assurance.write_text(json.dumps(contract))
+                assessment, _, _, _ = self.blocked_run(tabs=tabs, assurance=self.assurance)
+                self.assertIn(code, assessment["business_completeness"]["reason_codes"])
+        self.assurance.write_text(original)
+        # A valid manager assertion for another period is insufficient for August.
+        export = Path(self.temporary.name) / "synthetic-interview.md"
+        export.write_text(export.read_text().replace("August", "September"))
+        contract = json.loads(original)
+        contract["period"] = "2026-09"
+        contract["statements"]["scope"] = contract["statements"]["scope"].replace("August", "September")
+        contract["sha256"] = hashlib.sha256(export.read_bytes()).hexdigest()
+        self.assurance.write_text(json.dumps(contract))
+        assessment, _, _, _ = self.blocked_run(assurance=self.assurance)
+        self.assertIn("assurance_scope_mismatch", assessment["business_completeness"]["reason_codes"])
+
+    def test_learner_text_cannot_supply_manager_assurance_and_source_binding_is_real(self):
+        export = Path(self.temporary.name) / "synthetic-interview.md"
+        original, citation = export.read_text(), json.loads(self.assurance.read_text())
+        export.write_text(original.replace("**Finance and Operations Manager**", "**Beckham Vo**"))
+        citation["sha256"] = hashlib.sha256(export.read_bytes()).hexdigest()
+        self.assurance.write_text(json.dumps(citation))
+        assessment, _, _, _ = self.blocked_run(assurance=self.assurance)
+        self.assertIn("missing_or_invalid_monthly_assurance", assessment["business_completeness"]["reason_codes"])
+        # Genuine manager text naming another source does not assure the supplied one.
+        export.write_text(original.replace(URLS[0], URLS[1]))
+        citation["source_url"] = URLS[1]
+        citation["statements"]["owner"] = citation["statements"]["owner"].replace(URLS[0], URLS[1])
+        citation["sha256"] = hashlib.sha256(export.read_bytes()).hexdigest()
+        self.assurance.write_text(json.dumps(citation))
+        assessment, _, _, _ = self.blocked_run(assurance=self.assurance)
+        self.assertIn("assurance_source_mismatch", assessment["business_completeness"]["reason_codes"])
+
+    def test_real_completeness_failure_after_real_success_removes_outputs(self):
         self.successful_run()
         self.assertIn("Run status: **VALIDATED**", (self.output / "report.md").read_text())
         assessment, _, _, report = self.blocked_run()
@@ -319,8 +413,8 @@ class BriefTests(unittest.TestCase):
             audit_block = report.split("### Exact source audit records\n", 1)[1].split("```json\n", 1)[1].split("\n```", 1)[0]
             self.assertEqual(json.loads(audit_block), records)
             original_publish(output, data, report)
-        with contextlib.redirect_stdout(stream), patch.object(brief, "publish", side_effect=verify_publish), patch.object(brief, "assess_completeness", return_value={"status": "VERIFIED", "basis": "TEST ONLY: isolated publication spy"}):
-            brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="2026-08-15")
+        with contextlib.redirect_stdout(stream), patch.object(brief, "publish", side_effect=verify_publish):
+            brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="2026-08-15", ledger_assurance=self.assurance)
         self.assertIn("Operations meeting: **2026-08-15**", (self.output / "report.md").read_text())
         with self.assertRaises(brief.ValidationError), contextlib.redirect_stdout(io.StringIO()):
             brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="not-a-date")
@@ -405,6 +499,7 @@ class BriefTests(unittest.TestCase):
         self.tabs[1].rows[0][1][6] = source
         for tab in self.tabs:
             tab.title = source
+            tab.workbook_inventory = ((source, tab.tab_id, "visible", True),)
             version_column = tab.headers.index("source_version")
             for _, row in tab.rows:
                 row[version_column] = source
@@ -574,6 +669,8 @@ class BriefTests(unittest.TestCase):
         additional.title, additional.tab_id = "Budget title on a hidden source tab", "7"
         additional.rows = [(17, ["SECOND-TAB", "2026-09-01", "a", "supplies", "other period", "-1.01", "USD", "posted", "ledger", "v3", "confirmed", "kept"])]
         self.tabs.append(additional)
+        inventory = ((self.tabs[0].title, "1", "visible", True), (additional.title, "7", "hidden", True))
+        self.tabs[0].workbook_inventory = additional.workbook_inventory = inventory
         result, stdout = self.successful_run()
         self.assertEqual(result["preserved_rows"]["transactions"], 11)
         row = next(r for r in self.read_csv("transactions") if r["transaction_id"] == "SECOND-TAB")

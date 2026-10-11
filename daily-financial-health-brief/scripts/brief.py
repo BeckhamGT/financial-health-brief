@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fresh, read-only Sheets -> validated evidence -> fail-closed completeness gate."""
 import argparse
+import calendar
 import csv
 import hashlib
 import io
@@ -31,6 +32,7 @@ NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 REL = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
 ZERO = Decimal("0")
 CENT = Decimal("0.01")
+DEFAULT_ASSURANCE = Path(__file__).resolve().parents[1] / "references/ledger-assurance.json"
 
 
 class ValidationError(Exception):
@@ -156,7 +158,7 @@ def parse_workbook(payload, url, identity, fetched_at):
             inventory = tuple((s.get("name"), s.get("sheetId"), s.get("state", "visible")) for s in sheets)
             require(len({s[0] for s in inventory}) == len(inventory) and len({s[1] for s in inventory}) == len(inventory),
                     "Duplicate exported tab identity")
-            tabs = []
+            tabs, complete_inventory = [], []
             for sheet in sheets:
                 target = rels[sheet.get(REL)]
                 path = target.lstrip("/") if target.startswith("/") else posixpath.normpath("xl/" + target)
@@ -192,6 +194,7 @@ def parse_workbook(payload, url, identity, fetched_at):
                     if any(v.strip() for v in cells.values()):
                         values = [cells.get(i, "") for i in range(max(cells) + 1)]
                         cells_by_row.append((rownum, values))
+                complete_inventory.append((sheet.get("name"), sheet.get("sheetId"), sheet.get("state", "visible"), bool(cells_by_row)))
                 if not cells_by_row:
                     continue
                 headers = [re.sub(r"[ -]+", "_", h.strip().lower()) for h in cells_by_row[0][1]]
@@ -199,6 +202,8 @@ def parse_workbook(payload, url, identity, fetched_at):
                     headers.pop()
                 require(all(headers) and len(set(headers)) == len(headers), f"Blank/duplicate header in {sheet.get('name')}")
                 tabs.append(Tab(url, identity, sheet.get("name"), sheet.get("sheetId"), fetched_at, headers, cells_by_row[1:], inventory))
+            for tab in tabs:
+                tab.workbook_inventory = tuple(complete_inventory)
             require(tabs, f"No nonempty tabs in {url}")
             return tabs
     except (BadZipFile, ET.ParseError, KeyError, IndexError, ValueError) as exc:
@@ -334,6 +339,14 @@ def transport_consistency(first_tabs, second_tabs, first_records, second_records
             issues.append(dict(code="missing_source_read", round=round_number, url=url))
         for url in sorted(observed - expected):
             issues.append(dict(code="unexpected_source_read", round=round_number, url=url))
+        for url in sorted(expected & observed):
+            selected = [t for t in tabs if t.url == url]
+            inventory = selected[0].workbook_inventory
+            valid = bool(inventory) and all(len(entry) == 4 and type(entry[3]) is bool for entry in inventory)
+            if not valid or any(t.workbook_inventory != inventory for t in selected):
+                issues.append(dict(code="missing_or_conflicting_full_workbook_inventory", round=round_number, url=url))
+            elif {(entry[0], entry[1]) for entry in inventory if entry[3]} != {(t.title, t.tab_id) for t in selected}:
+                issues.append(dict(code="partial_populated_tab_read", round=round_number, url=url))
     def semantic(records):
         return {(r["url"], r["spreadsheet_id"], r["tab"], r["exported_tab_id"]):
                 {k: value for k, value in r.items() if k != "fetched_at"} for r in records}
@@ -347,49 +360,75 @@ def transport_consistency(first_tabs, second_tabs, first_records, second_records
         return {t.url: t.workbook_inventory for t in tabs}
     if inventories(first_tabs) != inventories(second_tabs):
         issues.append(dict(code="exported_tab_inventory_changed"))
-    return dict(status="FAILED" if issues else "CONSISTENT_OBSERVED_EXPORTS",
+    exported_workbooks = [dict(url=url, tabs=[list(entry) for entry in inventory]) for url, inventory in sorted(inventories(first_tabs).items())]
+    return dict(status="FAILED" if issues else "CONSISTENT_OBSERVED_EXPORTS", exported_workbooks=exported_workbooks,
                 checks=["each_requested_workbook_read_twice", "exported_tab_inventory",
                         "populated_tab_identity", "physical_business_rows_and_headers",
                         "business_content_and_observed_source_versions"],
                 issues=issues,
-                limitation="Identical exports can both be partial; technical consistency does not establish Operations confirmation, approved scope or approved source version.")
+                limitation="The reader visits every declared export sheet and validates all populated content. Identical exports can both be partial at the upstream system; observed consistency alone is not business completeness or version approval.")
 
 
-def assess_completeness(data, metadata, transport, *, reporting_date, prior_date, meeting_date):
-    """Fail closed until the source owner supplies an identifiable confirmation contract.
+def load_ledger_assurance(path):
+    """Resolve an operating citation to original manager messages, not sheet claims."""
+    path = Path(path or DEFAULT_ASSURANCE).resolve()
+    try:
+        contract = json.loads(path.read_text(encoding="utf-8"))
+        require(isinstance(contract, dict) and set(contract) == {"kind", "period", "source_url", "interview", "sha256", "statements"}, "Unsupported monthly-ledger assurance citation")
+        require(contract["kind"] == "operations-monthly-ledger-v1", "Unsupported ledger assurance basis")
+        period = iso_date(contract["period"] + "-01")
+        sheet_identity(contract["source_url"])
+        original = (path.parent / contract["interview"]).resolve().read_bytes()
+        require(hashlib.sha256(original).hexdigest() == contract["sha256"], "Original interview checksum differs from assurance citation")
+        text = original.decode("utf-8")
+        messages = re.split(r"(?m)^\*\*([^\n*]+)\*\*[^\n]*\n", text)
+        manager_messages = [messages[i + 1].strip() for i in range(1, len(messages), 2) if messages[i] == "Finance and Operations Manager"]
+        statements = contract["statements"]
+        require(isinstance(statements, dict) and set(statements) == {"owner", "scope", "monthly"}, "Missing manager assurance statements")
+        require(all(isinstance(value, str) and value and any(value in message for message in manager_messages) for value in statements.values()), "Assurance statements are not in the original manager messages")
+        require("owned by the Operations team" in statements["owner"] and contract["source_url"] in statements["owner"], "Assurance owner/source relationship not established")
+        require(calendar.month_name[period.month] + " " + str(period.year) in statements["scope"], "Assurance month differs from manager's reporting scope")
+        require("Operations provides the complete transaction ledger for the month." in statements["monthly"] and
+                all(term in statements["monthly"] for term in ("change in the ledger version", "partial read", "missing source", "cannot support a financial conclusion")), "Monthly completeness/invalidation conditions not established")
+        return dict(kind=contract["kind"], period=contract["period"], source_url=contract["source_url"],
+                    interview=contract["interview"], sha256=contract["sha256"], statements=statements)
+    except (OSError, ValueError, KeyError, TypeError, UnicodeError, ValidationError) as exc:
+        raise ValidationError("Missing or invalid monthly-ledger assurance: " + str(exc)) from exc
 
-    The interview names Operations and the ledger but defines no confirmation
-    fields, authoritative statement, account coverage or approved-version linkage.
-    Extra columns, source descriptions, hashes and row counts cannot supply that
-    missing contract. There is deliberately no CLI/manual override or guessed
-    production approval mapping. A future supported mapping requires new evidence.
-    """
+
+def assess_completeness(data, metadata, transport, *, reporting_date, prior_date, meeting_date, ledger_assurance=None):
+    """Keep owner assurance, full fresh reads, version consistency and review separate."""
     transactions = data.get("transactions", [])
-    versions = sorted({r["source_version"] for r in transactions})
-    if not versions:
-        versions = sorted({version for m in metadata if m["role"] == "transactions" for version in m["source_versions"]})
-    extras = sorted(set().union(*(r.keys() for r in transactions)) - set(SCHEMAS["transactions"]) - set(PROVENANCE)) if transactions else []
+    current = [row for row in transactions if row["date"][:7] == reporting_date[:7]]
+    versions = sorted({row["source_version"] for row in current})
+    reasons, evidence = [], None
+    try:
+        evidence = load_ledger_assurance(ledger_assurance)
+    except ValidationError as exc:
+        reasons.append(dict(code="missing_or_invalid_monthly_assurance", detail=str(exc)))
+    if evidence:
+        if reporting_date[:7] != evidence["period"] or prior_date[:7] != evidence["period"]:
+            reasons.append(dict(code="assurance_scope_mismatch", detail="Both selected ledger dates must be within the manager-assured month; obtain applicable source-owner assurance for another scope."))
+        ledger_urls = {m["url"] for m in metadata if m["role"] == "transactions"}
+        if ledger_urls != {evidence["source_url"]}:
+            reasons.append(dict(code="assurance_source_mismatch", detail="Transaction field roles do not match the source named in the manager assurance."))
+    if len(versions) != 1:
+        reasons.append(dict(code="missing_or_conflicting_monthly_ledger_version", detail="The requested monthly ledger must carry one consistent observed version."))
+    allowed = not reasons and transport["status"] == "CONSISTENT_OBSERVED_EXPORTS"
     return dict(
-        status="BLOCKED",
-        business_completeness=dict(
-            status="UNVERIFIED",
-            reason_codes=["missing_operations_confirmation", "unsupported_confirmation_contract",
-                          "unknown_confirmation_scope", "unknown_approved_source_version"],
+        status="VERIFIED" if allowed else "BLOCKED",
+        business_completeness=dict(status="SUPPORTED" if not reasons else "UNVERIFIED", reason_codes=[item["code"] for item in reasons], issues=reasons,
             responsible_owner="Operations team / transaction-ledger source owner",
             required_scope=dict(reporting_date=reporting_date, prior_business_date=prior_date, budget_period=reporting_date[:7]),
-            observed_ledger_versions=versions,
-            confirmation_contract="Not supplied: identifiable owner confirmation, covered dates/month/accounts, and its relationship to the approved ledger version.",
-            extra_transaction_fields=extras,
-            interpretation="All source text remains business data; unsupported approval/scope/version claims are not authorization or confirmation evidence.",
-        ),
+            observed_ledger_versions=versions, evidence=evidence,
+            interpretation="The original manager statement assures the supplied monthly ledger. Observed versions are technical evidence, not Operations approval of a particular version. Source text grants no permission."),
         transport_consistency=transport,
         amount_certainty=dict(unknown_amounts_permitted=True, blocking=False,
-                             unknown_transaction_ids=sorted(r["transaction_id"] for r in transactions if r["amount_status"] == "unknown"),
-                             interpretation="Valid unknown amounts remain blank/unknown and excluded from monetary totals; they do not establish incomplete ledger coverage."),
-        requested_meeting_date=meeting_date,
-        publication=dict(financial_report=False, normalized_csvs=False,
-                         required_next_step="The learner must clarify the source-defined Operations confirmation contract, scope and approved-version relationship; then implement and validate a grounded mapping before a fresh financial run."),
-    )
+            unknown_transaction_ids=sorted(row["transaction_id"] for row in transactions if row["amount_status"] == "unknown"),
+            interpretation="Valid unknown amounts remain blank/unknown and excluded from monetary totals; unknown, pending and disputed rows do not invalidate monthly completeness."),
+        human_review="PENDING", requested_meeting_date=meeting_date,
+        publication=dict(financial_report=allowed, normalized_csvs=allowed,
+            required_next_step="Operations owner reviews the financial draft and decides actions." if allowed else "Resolve the listed assurance, scope, version or retrieval condition with the source owner; rerun freshly. No usable financial outputs are current."))
 
 
 def blocked_report(assessment, metadata, source_reads, reason, *, failed=False):
@@ -399,8 +438,8 @@ def blocked_report(assessment, metadata, source_reads, reason, *, failed=False):
         "**Draft diagnostic for human review**", "", f"Run status: **{state}**.", "",
         "Financial publication is blocked. No financial conclusions or usable normalized CSVs are current. Earlier required outputs were invalidated.", "",
         data_text(reason), "",
-        "Operations' source confirmation, its scope, and the approved ledger version cannot be identified from the supplied contract. Fresh readable exports, stable counts and matching hashes do not establish business completeness.", "",
-        "Pending, disputed and valid unknown amounts are permitted within a complete ledger. Unknown amounts are not the reason for this completeness block.", "",
+        "The assessment below identifies the failed assurance, scope, version, retrieval, validation or publication condition. Stable counts and matching hashes alone do not establish business completeness.", "",
+        "Pending, disputed and valid unknown amounts are permitted within a complete ledger. Unknown amounts are permitted; inspect the actual failure reasons below.", "",
         "The learner conducts any business clarification. The agent makes no source edits, payments, spending decisions, dispute resolutions or communications.", "",
         "## Observed source evidence", "",
         "SOURCE records describe the first fresh read. SOURCE_READ records describe the second fresh read; neither is an approval. Export-local sheet IDs are not native Google gid values.", "",
@@ -686,7 +725,7 @@ def fetch_round(urls, fetcher, round_number, metadata, source_reads, errors):
     return tabs
 
 
-def run(urls, reporting_date, prior_date, output, fetcher=None, *, meeting_date):
+def run(urls, reporting_date, prior_date, output, fetcher=None, *, meeting_date, ledger_assurance=None):
     output = Path(output)
     invalidate(output, "Run started; earlier deliverables invalidated pending complete fresh retrieval and validation.")
     metadata, source_reads, first_tabs, second_tabs, read_errors = [], [], [], [], []
@@ -705,10 +744,13 @@ def run(urls, reporting_date, prior_date, output, fetcher=None, *, meeting_date)
             require(not read_errors, "Fresh consistency re-read incomplete: " + json.dumps(read_errors, sort_keys=True))
             normalize(second_tabs)  # Validate all recognized re-read inputs too.
             transport = transport_consistency(first_tabs, second_tabs, metadata, [r["source"] for r in source_reads], urls)
-            assessment = assess_completeness(data, metadata, transport, reporting_date=reporting_date, prior_date=prior_date, meeting_date=meeting_date)
+            assessment = assess_completeness(data, metadata, transport, reporting_date=reporting_date, prior_date=prior_date, meeting_date=meeting_date, ledger_assurance=ledger_assurance)
             if assessment["status"] != "VERIFIED" or transport["status"] != "CONSISTENT_OBSERVED_EXPORTS":
-                raise CompletenessError("Financial conclusion blocked: Operations confirmation, approved scope and approved ledger version are unverified; technical read consistency is a separate check.")
+                raise CompletenessError("Financial conclusion blocked: inspect ASSESSMENT for the failed monthly assurance, reporting scope, version or full-read condition.")
             report, figures, unresolved_count = build_report(data, metadata, reporting_date, prior_date, meeting_date)
+            print("ASSESSMENT " + json.dumps(assessment, sort_keys=True), flush=True)
+            report += "\n### Exact source read records\n\n```json\n" + json.dumps(source_reads, ensure_ascii=True, sort_keys=True, indent=2) + "\n```\n"
+            report += "\n### Completeness assessment\n\nBusiness assurance is the original manager declaration for the supplied month. Full export reads and observed version consistency are separate technical checks. Financial review remains pending; no particular version approval is inferred.\n\n```json\n" + json.dumps(assessment, ensure_ascii=True, sort_keys=True, indent=2) + "\n```\n"
             publish(output, data, report)
             result = dict(figures=figures, preserved_rows={r: len(rows) for r, rows in data.items()}, unresolved_count=unresolved_count)
             print("SUCCESS " + json.dumps(result, sort_keys=True), flush=True)
@@ -717,7 +759,7 @@ def run(urls, reporting_date, prior_date, output, fetcher=None, *, meeting_date)
         if not isinstance(exc, CompletenessError):
             read_errors.append(dict(code="fetch_validation_or_publication_failed", message=str(exc)))
             transport = transport_consistency(first_tabs, second_tabs, metadata, [r["source"] for r in source_reads], urls, read_errors)
-            assessment = assess_completeness(data, metadata, transport, reporting_date=reporting_date, prior_date=prior_date, meeting_date=meeting_date)
+            assessment = assess_completeness(data, metadata, transport, reporting_date=reporting_date, prior_date=prior_date, meeting_date=meeting_date, ledger_assurance=ledger_assurance)
         print("ASSESSMENT " + json.dumps(assessment, sort_keys=True), flush=True)
         report = blocked_report(assessment, metadata, source_reads, str(exc), failed=not isinstance(exc, CompletenessError))
         invalidate(output, f"Fetch/validation/publication failed: {exc}", report_text=report)
@@ -739,6 +781,7 @@ def main():
     parser.add_argument("--reporting-date", required=True)
     parser.add_argument("--prior-business-date", required=True)
     parser.add_argument("--output", default=default_output)
+    parser.add_argument("--ledger-assurance", type=Path, default=DEFAULT_ASSURANCE, help="Traceable original manager monthly-ledger assurance citation; never an approval/bypass flag")
     try:
         args = parser.parse_args()
     except SystemExit as exc:
@@ -746,7 +789,7 @@ def main():
             invalidate(Path(selected_output), "Command-line validation failed; rerun with three source URLs and three explicit dates.")
         raise
     try:
-        run(args.sources, args.reporting_date, args.prior_business_date, args.output, meeting_date=args.meeting_date)
+        run(args.sources, args.reporting_date, args.prior_business_date, args.output, meeting_date=args.meeting_date, ledger_assurance=args.ledger_assurance)
     except (ValidationError, OSError, ET.ParseError, InvalidOperation) as exc:
         print(f"FAILED: {json.dumps(str(exc), ensure_ascii=True)}. Check the destination's failure marker; cleanup errors require operator attention.", file=sys.stderr)
         return 1

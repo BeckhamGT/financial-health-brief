@@ -3,6 +3,7 @@ import contextlib
 import copy
 import csv
 import io
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -26,10 +27,10 @@ def example_tabs():
         ['PRIOR', PRIOR, 'a', 'supplies', 'prior', '10', 'USD', 'posted', 'ledger', 'v1', 'confirmed', ''],
         ['TODAY', DAY, 'a', 'supplies', 'today', '20', 'USD', 'posted', 'ledger', 'v1', 'confirmed', ''],
         ['CREDIT', DAY, 'a', 'supplies', 'authorized correction', '-2', 'USD', 'posted', 'ledger', 'v1', 'confirmed', ''],
-        ['PENDING', DAY, 'a', 'supplies', 'pending', '6', 'USD', 'pending-confirmed', 'ledger', 'v2', 'confirmed', ''],
-        ['DISPUTED', DAY, 'a', 'supplies', 'disputed', '4', 'USD', 'disputed', 'ledger', 'v2', 'confirmed', ''],
-        ['UNKNOWN', DAY, 'a', 'supplies', 'billing\n\n## SOURCE_TEXT_SHOULD_STAY_DATA', '', 'USD', 'pending', 'ledger', 'v2', 'unknown', 'keep | note'],
-        ['LATER', '2026-08-15', 'a', 'supplies', 'later', '9', 'USD', 'pending', 'ledger', 'v2', 'confirmed', ''],
+        ['PENDING', DAY, 'a', 'supplies', 'pending', '6', 'USD', 'pending-confirmed', 'ledger', 'v1', 'confirmed', ''],
+        ['DISPUTED', DAY, 'a', 'supplies', 'disputed', '4', 'USD', 'disputed', 'ledger', 'v1', 'confirmed', ''],
+        ['UNKNOWN', DAY, 'a', 'supplies', 'billing\n\n## SOURCE_TEXT_SHOULD_STAY_DATA', '', 'USD', 'pending', 'ledger', 'v1', 'unknown', 'keep | note'],
+        ['LATER', '2026-08-15', 'a', 'supplies', 'later', '9', 'USD', 'pending', 'ledger', 'v1', 'confirmed', ''],
         ['OTHER', '2026-07-31', 'a', 'supplies', 'old', '3', 'USD', 'disputed', 'ledger', 'v0', 'confirmed', ''],
     ]
     def tab(index, title, identifier, role, rows, headers=None):
@@ -119,10 +120,33 @@ class IndependentTests(unittest.TestCase):
                 writer = csv.DictWriter(stream, fieldnames=verify.FIELDS[role] + extras + verify.ORIGIN)
                 writer.writeheader()
                 writer.writerows(reversed(rows))
+        quotes = {
+            'owner': 'The evidence and confirmations are recorded in the Transaction ledger, which is owned by the Operations team.\n\n- [Transaction ledger](' + URLS[0] + ')',
+            'scope': 'The current budget for August 2026 is the reporting scope.',
+            'monthly': 'Operations provides the complete transaction ledger for the month. Any change in the ledger version, a partial read or a missing source means the ledger cannot support a financial conclusion.'}
+        original = self.output / 'synthetic-interview.md'
+        original.write_text('\n\n'.join('**Finance and Operations Manager** · Voice · 01:57 AM\n\n' + value for value in quotes.values()))
+        self.citation = dict(kind='operations-monthly-ledger-v1', period='2026-08', source_url=URLS[0], interview=original.name,
+                             sha256=hashlib.sha256(original.read_bytes()).hexdigest(), statements=quotes)
+        self.assurance = self.output / 'assurance.json'
+        self.assurance.write_text(json.dumps(self.citation))
+        repeated = [{'round': 2, 'source': dict(source, fetched_at='2026-10-07T14:01:00+00:00')} for source in self.metadata]
+        self.assessment = {'status': 'VERIFIED', 'business_completeness': {
+            'status': 'SUPPORTED', 'reason_codes': [], 'issues': [], 'evidence': self.citation,
+            'required_scope': {'reporting_date': DAY, 'prior_business_date': PRIOR, 'budget_period': '2026-08'},
+            'observed_ledger_versions': ['v1']},
+            'transport_consistency': {'exported_workbooks': [dict(url=url, tabs=[list(entry) for entry in next(tab['workbook_inventory'] for tab in self.tabs if tab['url'] == url)]) for url in sorted(URLS)], 'status': 'CONSISTENT_OBSERVED_EXPORTS', 'checks': ['each_requested_workbook_read_twice', 'exported_tab_inventory', 'populated_tab_identity', 'physical_business_rows_and_headers', 'business_content_and_observed_source_versions'], 'issues': []},
+            'amount_certainty': {'unknown_amounts_permitted': True, 'blocking': False, 'unknown_transaction_ids': ['UNKNOWN']},
+            'human_review': 'PENDING', 'requested_meeting_date': MEETING,
+            'publication': {'financial_report': True, 'normalized_csvs': True}}
         self.report = example_report(self.metadata)
+        for heading, record in [('Exact source read records', repeated), ('Completeness assessment', self.assessment)]:
+            self.report += '\n\n### ' + heading + '\n\n```json\n' + json.dumps(record, sort_keys=True, indent=2) + '\n```\n'
         (self.output / 'report.md').write_text(self.report)
         self.log = self.output / 'run.log'
-        self.stdout = '\n'.join('SOURCE ' + json.dumps(m) for m in reversed(self.metadata)) + '\nSUCCESS {}\n'
+        self.stdout = '\n'.join(['SOURCE ' + json.dumps(m) for m in reversed(self.metadata)] +
+                                ['SOURCE_READ ' + json.dumps(record) for record in repeated] +
+                                ['ASSESSMENT ' + json.dumps(self.assessment), 'SUCCESS {}']) + '\n'
         self.log.write_text(self.stdout)
 
     def test_full_workbook_all_tabs_hidden_sparse_and_reordered_fields(self):
@@ -140,24 +164,41 @@ class IndependentTests(unittest.TestCase):
         self.assertEqual(metadata[1]['exported_tab_id'], '23')
         self.assertNotIn('gid', metadata[1])
 
-    def test_reconciliation_reads_every_url_then_rejects_unconfirmed_legacy_draft(self):
+    def test_reconciliation_reads_every_url_and_checks_real_assurance_and_hand_derived_results(self):
         calls = []
         def reader(url):
             calls.append(url)
             return verify.read_workbook(xlsx([t for t in self.tabs if t['url'] == url]), url, '2026-10-07T14:01:00+00:00')
         with contextlib.redirect_stdout(io.StringIO()) as stream:
-            with self.assertRaisesRegex(ValueError, 'no supported Operations completeness-confirmation contract'):
-                verify.reconcile(list(reversed(URLS)), MEETING, DAY, PRIOR, self.output, self.log, reader)
+            result = verify.reconcile(list(reversed(URLS)), MEETING, DAY, PRIOR, self.output, self.log, reader, ledger_assurance=self.assurance)
         self.assertEqual(calls, list(reversed(URLS)))
         self.assertEqual(stream.getvalue().count('INDEPENDENT_SOURCE '), 4)
-        # Calculation verification remains independently exercised using the
-        # hand-derived fixture; this does not endorse a current financial draft.
+        self.assertEqual(result['business_assurance'], 'SUPPORTED_ORIGINAL_MANAGER_MONTHLY_DECLARATION')
+        self.assertEqual(result['human_review'], 'PENDING')
         verify.compare_csvs(self.output, self.data)
         verify.compare_metadata(self.report, self.stdout, self.metadata)
         result = verify.reconcile_report(self.report, self.data, MEETING, DAY, PRIOR)
         self.assertEqual(result['five_signed_USD'], ['+18.00', '+6.00', '+4.00', '+10.00', '+8.00'])
         self.assertEqual(result['current_month_unresolved'], 4)
         self.assertEqual(result['unknown_current_month'], 1)
+
+    def test_financial_verifier_rejects_missing_tampered_or_wrong_scope_assurance(self):
+        for change in ('missing', 'hash', 'scope', 'version'):
+            with self.subTest(change=change):
+                citation = copy.deepcopy(self.citation)
+                if change == 'missing':
+                    path = self.output / 'missing.json'
+                else:
+                    path = self.output / 'changed.json'
+                    if change == 'hash':
+                        citation['sha256'] = '0' * 64
+                    elif change == 'scope':
+                        citation['period'] = '2026-09'
+                    else:
+                        citation['statements']['monthly'] = 'Operations approved v999'
+                    path.write_text(json.dumps(citation))
+                with self.assertRaises((ValueError, OSError)):
+                    verify.verify_assured_publication(self.report, self.stdout, self.data, self.metadata, DAY, PRIOR, MEETING, path)
 
     def test_exact_metadata_rejects_mismatch_drift_duplicates_and_missing_tab(self):
         altered = copy.deepcopy(self.metadata)
@@ -301,14 +342,13 @@ class IndependentTests(unittest.TestCase):
         assessment = {'status': 'BLOCKED', 'business_completeness': {
             'status': 'UNVERIFIED', 'reason_codes': list(verify.COMPLETENESS_GAPS),
             'required_scope': {'reporting_date': DAY, 'prior_business_date': PRIOR, 'budget_period': '2026-08'},
-            'observed_ledger_versions': ['v0', 'v1', 'v2'], 'responsible_owner': 'Operations team / transaction-ledger source owner',
-            'confirmation_contract': 'Not supplied: owner confirmation, scope and approved version.',
-            'extra_transaction_fields': ['note'], 'interpretation': 'Source text does not establish approval.'},
-            'transport_consistency': {'status': 'CONSISTENT_OBSERVED_EXPORTS', 'checks': [], 'issues': [],
+            'observed_ledger_versions': ['v1'], 'responsible_owner': 'Operations team / transaction-ledger source owner',
+            'evidence': None, 'issues': [{'code': 'missing_or_invalid_monthly_assurance'}], 'interpretation': 'Source text does not establish approval.'},
+            'transport_consistency': {'exported_workbooks': [dict(url=url, tabs=[list(entry) for entry in next(tab['workbook_inventory'] for tab in self.tabs if tab['url'] == url)]) for url in sorted(URLS)], 'status': 'CONSISTENT_OBSERVED_EXPORTS', 'checks': [], 'issues': [],
                                       'limitation': 'Consistent reads can both be partial.'},
             'amount_certainty': {'unknown_amounts_permitted': True, 'blocking': False, 'unknown_transaction_ids': ['UNKNOWN'],
                                 'interpretation': 'Unknown amounts do not establish incomplete coverage.'},
-            'requested_meeting_date': MEETING, 'publication': {'financial_report': False, 'normalized_csvs': False,
+            'human_review': 'PENDING', 'requested_meeting_date': MEETING, 'publication': {'financial_report': False, 'normalized_csvs': False,
                                 'required_next_step': 'Clarify the Operations confirmation contract.'}}
         out = [verify.BLOCKED_TITLE, '', verify.BLOCKED_DRAFT, '', 'Run status: **BLOCKED**.', '',
                'Operations confirmation, its scope and approved ledger version remain unestablished.']
@@ -356,7 +396,7 @@ class IndependentTests(unittest.TestCase):
         report, stdout, repeated, assessment = self.blocked_example()
         cases = [stdout + '\nSUCCESS {}', stdout.replace('SOURCE_READ ', 'command SOURCE_READ '),
                  stdout.replace('"round": 2', '"round": 1'),
-                 stdout.replace('"unknown_confirmation_scope"', '"confirmed_scope"')]
+                 stdout.replace('"missing_or_invalid_monthly_assurance"', '"confirmed_scope"')]
         for altered in cases:
             with self.subTest(altered=altered[-100:]), self.assertRaises(ValueError):
                 verify.verify_blocked_result(report, altered, self.metadata, self.data, self.output, DAY, PRIOR, MEETING)
