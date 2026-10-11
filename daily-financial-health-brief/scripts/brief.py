@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fresh, read-only Google Sheets -> validated Decimal calculations -> review draft."""
+"""Fresh, read-only Sheets -> validated evidence -> fail-closed completeness gate."""
 import argparse
 import csv
 import hashlib
@@ -35,6 +35,10 @@ CENT = Decimal("0.01")
 
 class ValidationError(Exception):
     pass
+
+
+class CompletenessError(ValidationError):
+    """Fresh inputs cannot support a financial conclusion without owner evidence."""
 
 
 def utc_now():
@@ -99,6 +103,7 @@ class Tab:
     fetched_at: str
     headers: list
     rows: list  # (original 1-based sheet row number, list of exact cell strings)
+    workbook_inventory: tuple = ()  # All exported tabs, including wholly empty tabs.
 
 
 def sheet_identity(url):
@@ -147,20 +152,29 @@ def parse_workbook(payload, url, identity, fetched_at):
                 if fid in range(14, 23) or fid in range(45, 48) or re.search(r"[yd]", code):
                     date_styles.add(index)
             rels = {r.get("Id"): r.get("Target") for r in xml(z, "xl/_rels/workbook.xml.rels")}
+            sheets = wb.findall("s:sheets/s:sheet", NS)
+            inventory = tuple((s.get("name"), s.get("sheetId"), s.get("state", "visible")) for s in sheets)
+            require(len({s[0] for s in inventory}) == len(inventory) and len({s[1] for s in inventory}) == len(inventory),
+                    "Duplicate exported tab identity")
             tabs = []
-            for sheet in wb.findall("s:sheets/s:sheet", NS):
+            for sheet in sheets:
                 target = rels[sheet.get(REL)]
                 path = target.lstrip("/") if target.startswith("/") else posixpath.normpath("xl/" + target)
                 cells_by_row = []
+                physical_rows = set()
                 for row in xml(z, path).findall("s:sheetData/s:row", NS):
+                    rownum = int(row.get("r"))
+                    require(rownum > 0 and rownum not in physical_rows, "Duplicate/invalid physical sheet row")
+                    physical_rows.add(rownum)
                     cells = {}
                     for c in row.findall("s:c", NS):
                         address = c.get("r", "")
-                        letters = re.match(r"([A-Z]+)\d+", address)
-                        require(letters is not None, f"Invalid cell address {address}")
+                        letters = re.fullmatch(r"([A-Z]+)([1-9]\d*)", address)
+                        require(letters is not None and int(letters.group(2)) == rownum, f"Invalid/mismatched cell address {address}")
                         col = 0
                         for letter in letters.group(1):
                             col = col * 26 + ord(letter) - 64
+                        require(col - 1 not in cells, f"Duplicate cell address {address}")
                         kind = c.get("t", "n")
                         value = c.findtext("s:v", default="", namespaces=NS)
                         require(kind != "e", f"Spreadsheet error at {sheet.get('name')}!{address}: {value}")
@@ -177,18 +191,32 @@ def parse_workbook(payload, url, identity, fetched_at):
                         cells[col - 1] = value
                     if any(v.strip() for v in cells.values()):
                         values = [cells.get(i, "") for i in range(max(cells) + 1)]
-                        cells_by_row.append((int(row.get("r")), values))
+                        cells_by_row.append((rownum, values))
                 if not cells_by_row:
                     continue
                 headers = [re.sub(r"[ -]+", "_", h.strip().lower()) for h in cells_by_row[0][1]]
                 while headers and not headers[-1]:
                     headers.pop()
                 require(all(headers) and len(set(headers)) == len(headers), f"Blank/duplicate header in {sheet.get('name')}")
-                tabs.append(Tab(url, identity, sheet.get("name"), sheet.get("sheetId"), fetched_at, headers, cells_by_row[1:]))
+                tabs.append(Tab(url, identity, sheet.get("name"), sheet.get("sheetId"), fetched_at, headers, cells_by_row[1:], inventory))
             require(tabs, f"No nonempty tabs in {url}")
             return tabs
     except (BadZipFile, ET.ParseError, KeyError, IndexError, ValueError) as exc:
         raise ValidationError(f"Cannot parse workbook {url}: {exc}") from exc
+
+
+def source_audit(tab, role=None):
+    """Audit exported evidence; neither a row count nor a hash confirms completeness."""
+    roles = [name for name, fields in SCHEMAS.items() if set(fields) <= set(tab.headers)]
+    if role is None:
+        role = roles[0] if len(roles) == 1 else "unrecognized_or_ambiguous"
+    version_column = tab.headers.index("source_version") if "source_version" in tab.headers else None
+    versions = sorted({values[version_column] for _, values in tab.rows
+                       if version_column is not None and len(values) > version_column and values[version_column]})
+    semantic_hash = hashlib.sha256(json.dumps([tab.headers, tab.rows], ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+    return dict(url=tab.url, spreadsheet_id=tab.spreadsheet_id, tab=tab.title,
+                exported_tab_id=tab.tab_id, fetched_at=tab.fetched_at, role=role,
+                source_versions=versions, data_rows=len(tab.rows), content_sha256=semantic_hash)
 
 
 def normalize(tabs):
@@ -201,7 +229,6 @@ def normalize(tabs):
         role = roles[0]
         require(not set(PROVENANCE) & set(tab.headers), f"Reserved provenance header collision in {tab.title}")
         require(tab.rows, f"Empty {role} source in {tab.title}")
-        versions = set()
         for rownum, values in tab.rows:
             require(len(values) <= len(tab.headers), f"Data beyond declared headers in {tab.title} row {rownum}")
             row = dict(zip(tab.headers, values + [""] * (len(tab.headers) - len(values))))
@@ -213,7 +240,6 @@ def normalize(tabs):
                 required.add("currency")
             require(all(row[k].strip() for k in required), f"Missing required field in {tab.title} row {rownum}")
             require(all(row[k] == row[k].strip() for k in SCHEMAS[role]), f"Whitespace ambiguity in {tab.title} row {rownum}")
-            versions.add(row["source_version"])
             if role == "transactions":
                 iso_date(row["date"])
                 require(status(row) in {"posted", "pending", "disputed"}, f"Unknown status at {row['transaction_id']}")
@@ -242,10 +268,7 @@ def normalize(tabs):
             require(key not in identities, f"Duplicate/conflicting business identity {key}")
             identities.add(key)
             data[role].append(row)
-        semantic_hash = hashlib.sha256(json.dumps([tab.headers, tab.rows], ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
-        metadata.append(dict(url=tab.url, spreadsheet_id=tab.spreadsheet_id, tab=tab.title,
-                             exported_tab_id=tab.tab_id, fetched_at=tab.fetched_at, role=role,
-                             source_versions=sorted(versions), data_rows=len(tab.rows), content_sha256=semantic_hash))
+        metadata.append(source_audit(tab, role))
     require(all(data.values()), "All three source roles must be present")
     for role, rows in data.items():
         rows.sort(key=lambda r: tuple(r[k] for k in SCHEMAS[role] if k not in {"amount", "value", "budget_amount"}))
@@ -299,6 +322,94 @@ def escape(value):
 def table(headers, rows):
     return "\n".join(["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * len(headers)) + " |"] +
                      ["| " + " | ".join(escape(c) for c in row) + " |" for row in rows])
+
+
+def transport_consistency(first_tabs, second_tabs, first_records, second_records, requested_urls, errors=None):
+    """Check two observed exports, without inferring Operations' ledger coverage."""
+    issues = list(errors or [])
+    expected = set(requested_urls)
+    for round_number, tabs in ((1, first_tabs), (2, second_tabs)):
+        observed = {t.url for t in tabs}
+        for url in sorted(expected - observed):
+            issues.append(dict(code="missing_source_read", round=round_number, url=url))
+        for url in sorted(observed - expected):
+            issues.append(dict(code="unexpected_source_read", round=round_number, url=url))
+    def semantic(records):
+        return {(r["url"], r["spreadsheet_id"], r["tab"], r["exported_tab_id"]):
+                {k: value for k, value in r.items() if k != "fetched_at"} for r in records}
+    first, second = semantic(first_records), semantic(second_records)
+    if first.keys() != second.keys():
+        issues.append(dict(code="populated_tab_inventory_changed"))
+    for identity in sorted(first.keys() & second.keys()):
+        if first[identity] != second[identity]:
+            issues.append(dict(code="source_content_or_version_changed", source_identity=list(identity)))
+    def inventories(tabs):
+        return {t.url: t.workbook_inventory for t in tabs}
+    if inventories(first_tabs) != inventories(second_tabs):
+        issues.append(dict(code="exported_tab_inventory_changed"))
+    return dict(status="FAILED" if issues else "CONSISTENT_OBSERVED_EXPORTS",
+                checks=["each_requested_workbook_read_twice", "exported_tab_inventory",
+                        "populated_tab_identity", "physical_business_rows_and_headers",
+                        "business_content_and_observed_source_versions"],
+                issues=issues,
+                limitation="Identical exports can both be partial; technical consistency does not establish Operations confirmation, approved scope or approved source version.")
+
+
+def assess_completeness(data, metadata, transport, *, reporting_date, prior_date, meeting_date):
+    """Fail closed until the source owner supplies an identifiable confirmation contract.
+
+    The interview names Operations and the ledger but defines no confirmation
+    fields, authoritative statement, account coverage or approved-version linkage.
+    Extra columns, source descriptions, hashes and row counts cannot supply that
+    missing contract. There is deliberately no CLI/manual override or guessed
+    production approval mapping. A future supported mapping requires new evidence.
+    """
+    transactions = data.get("transactions", [])
+    versions = sorted({r["source_version"] for r in transactions})
+    if not versions:
+        versions = sorted({version for m in metadata if m["role"] == "transactions" for version in m["source_versions"]})
+    extras = sorted(set().union(*(r.keys() for r in transactions)) - set(SCHEMAS["transactions"]) - set(PROVENANCE)) if transactions else []
+    return dict(
+        status="BLOCKED",
+        business_completeness=dict(
+            status="UNVERIFIED",
+            reason_codes=["missing_operations_confirmation", "unsupported_confirmation_contract",
+                          "unknown_confirmation_scope", "unknown_approved_source_version"],
+            responsible_owner="Operations team / transaction-ledger source owner",
+            required_scope=dict(reporting_date=reporting_date, prior_business_date=prior_date, budget_period=reporting_date[:7]),
+            observed_ledger_versions=versions,
+            confirmation_contract="Not supplied: identifiable owner confirmation, covered dates/month/accounts, and its relationship to the approved ledger version.",
+            extra_transaction_fields=extras,
+            interpretation="All source text remains business data; unsupported approval/scope/version claims are not authorization or confirmation evidence.",
+        ),
+        transport_consistency=transport,
+        amount_certainty=dict(unknown_amounts_permitted=True, blocking=False,
+                             unknown_transaction_ids=sorted(r["transaction_id"] for r in transactions if r["amount_status"] == "unknown"),
+                             interpretation="Valid unknown amounts remain blank/unknown and excluded from monetary totals; they do not establish incomplete ledger coverage."),
+        requested_meeting_date=meeting_date,
+        publication=dict(financial_report=False, normalized_csvs=False,
+                         required_next_step="The learner must clarify the source-defined Operations confirmation contract, scope and approved-version relationship; then implement and validate a grounded mapping before a fresh financial run."),
+    )
+
+
+def blocked_report(assessment, metadata, source_reads, reason, *, failed=False):
+    state = "FAILED" if failed else "BLOCKED"
+    return "\n".join([
+        f"# STALE / {state} — no usable financial brief", "",
+        "**Draft diagnostic for human review**", "", f"Run status: **{state}**.", "",
+        "Financial publication is blocked. No financial conclusions or usable normalized CSVs are current. Earlier required outputs were invalidated.", "",
+        data_text(reason), "",
+        "Operations' source confirmation, its scope, and the approved ledger version cannot be identified from the supplied contract. Fresh readable exports, stable counts and matching hashes do not establish business completeness.", "",
+        "Pending, disputed and valid unknown amounts are permitted within a complete ledger. Unknown amounts are not the reason for this completeness block.", "",
+        "The learner conducts any business clarification. The agent makes no source edits, payments, spending decisions, dispute resolutions or communications.", "",
+        "## Observed source evidence", "",
+        "SOURCE records describe the first fresh read. SOURCE_READ records describe the second fresh read; neither is an approval. Export-local sheet IDs are not native Google gid values.", "",
+        table(["Role", "Source URL / spreadsheet ID", "Tab / exported ID", "Fetched at UTC", "Source versions", "Fetched data rows", "Content SHA-256"],
+              [(m["role"], m["url"] + " / " + m["spreadsheet_id"], SafeText(f"{data_text(m['tab'])} / {data_text(m['exported_tab_id'])}"), m["fetched_at"], SafeText(", ".join(data_text(v) for v in m["source_versions"])), m["data_rows"], m["content_sha256"]) for m in metadata]), "",
+        "### Exact source audit records", "", "```json", json.dumps(metadata, ensure_ascii=True, sort_keys=True, indent=2), "```", "",
+        "### Exact source read records", "", "```json", json.dumps(source_reads, ensure_ascii=True, sort_keys=True, indent=2), "```", "",
+        "### Completeness assessment", "", "```json", json.dumps(assessment, ensure_ascii=True, sort_keys=True, indent=2), "```", "",
+    ])
 
 
 def build_report(data, metadata, reporting_date, prior_date, meeting_date):
@@ -474,13 +585,13 @@ def build_report(data, metadata, reporting_date, prior_date, meeting_date):
     return "\n".join(out), {label: signed(value) for label, value, _ in figures}, len(month_queue) + len(other_queue) + sum(r[0].startswith(("Material overage:", "Collected revenue interpretation")) for r in queue)
 
 
-def invalidate(output, reason):
+def invalidate(output, reason, *, report_text=None):
     if output.is_symlink():
         raise OSError("Output directory is a symlink; stop use and quarantine the output path without changing its target")
     output.mkdir(parents=True, exist_ok=True)
     # Mark every earlier artifact stale before any cleanup can fail.
     report_path = output / "report.md"
-    marker = "# STALE / FAILED — no usable financial brief\n\n" + data_text(reason) + "\n\nRecorded at UTC: " + utc_now() + "\n"
+    marker = report_text if report_text is not None else "# STALE / FAILED — no usable financial brief\n\n" + data_text(reason) + "\n\nRecorded at UTC: " + utc_now() + "\n"
     errors = []
     report_state = "Report marked STALE / FAILED"
     try:
@@ -547,9 +658,39 @@ def publish(output, data, report):
         os.replace(staging / "report.md", output / "report.md")
 
 
+def fetch_round(urls, fetcher, round_number, metadata, source_reads, errors):
+    tabs = []
+    for url in sorted(urls, key=sheet_identity):
+        try:
+            current = (fetcher or fetch_workbook)(url)
+            require(isinstance(current, list) and current, f"Missing/partial exported workbook for {url}")
+            identities = set()
+            for tab in current:
+                require(isinstance(tab, Tab) and tab.url == url and tab.spreadsheet_id == sheet_identity(url),
+                        f"Returned workbook does not match requested source {url}")
+                require(isinstance(tab.title, str) and bool(tab.title.strip()) and bool(tab.tab_id), "Missing exported tab identity")
+                require((tab.title, tab.tab_id) not in identities, "Duplicate populated exported tab identity")
+                identities.add((tab.title, tab.tab_id))
+            for tab in sorted(current, key=lambda t: t.title):
+                record = source_audit(tab)
+                if round_number == 1:
+                    metadata.append(record)
+                    print("SOURCE " + json.dumps(record, sort_keys=True), flush=True)
+                else:
+                    read_record = dict(round=round_number, source=record)
+                    source_reads.append(read_record)
+                    print("SOURCE_READ " + json.dumps(read_record, sort_keys=True), flush=True)
+            tabs.extend(current)
+        except (ValidationError, OSError, ET.ParseError, InvalidOperation) as exc:
+            errors.append(dict(code="source_read_failed", round=round_number, url=url, message=str(exc)))
+    return tabs
+
+
 def run(urls, reporting_date, prior_date, output, fetcher=None, *, meeting_date):
     output = Path(output)
     invalidate(output, "Run started; earlier deliverables invalidated pending complete fresh retrieval and validation.")
+    metadata, source_reads, first_tabs, second_tabs, read_errors = [], [], [], [], []
+    data, assessment = {}, None
     try:
         with localcontext() as ctx:
             ctx.prec = 50
@@ -557,19 +698,29 @@ def run(urls, reporting_date, prior_date, output, fetcher=None, *, meeting_date)
             iso_date(meeting_date)
             iso_date(reporting_date)
             iso_date(prior_date)
-            tabs = []
-            for url in sorted(urls, key=sheet_identity):
-                tabs.extend((fetcher or fetch_workbook)(url))
-            data, metadata = normalize(tabs)
+            first_tabs = fetch_round(urls, fetcher, 1, metadata, source_reads, read_errors)
+            require(not read_errors, "Fresh source retrieval incomplete: " + json.dumps(read_errors, sort_keys=True))
+            data, _ = normalize(first_tabs)
+            second_tabs = fetch_round(urls, fetcher, 2, metadata, source_reads, read_errors)
+            require(not read_errors, "Fresh consistency re-read incomplete: " + json.dumps(read_errors, sort_keys=True))
+            normalize(second_tabs)  # Validate all recognized re-read inputs too.
+            transport = transport_consistency(first_tabs, second_tabs, metadata, [r["source"] for r in source_reads], urls)
+            assessment = assess_completeness(data, metadata, transport, reporting_date=reporting_date, prior_date=prior_date, meeting_date=meeting_date)
+            if assessment["status"] != "VERIFIED" or transport["status"] != "CONSISTENT_OBSERVED_EXPORTS":
+                raise CompletenessError("Financial conclusion blocked: Operations confirmation, approved scope and approved ledger version are unverified; technical read consistency is a separate check.")
             report, figures, unresolved_count = build_report(data, metadata, reporting_date, prior_date, meeting_date)
-            for m in metadata:
-                print("SOURCE " + json.dumps(m, sort_keys=True), flush=True)
             publish(output, data, report)
             result = dict(figures=figures, preserved_rows={r: len(rows) for r, rows in data.items()}, unresolved_count=unresolved_count)
             print("SUCCESS " + json.dumps(result, sort_keys=True), flush=True)
             return result
     except BaseException as exc:
-        invalidate(output, f"Fetch/validation/publication failed: {exc}")
+        if not isinstance(exc, CompletenessError):
+            read_errors.append(dict(code="fetch_validation_or_publication_failed", message=str(exc)))
+            transport = transport_consistency(first_tabs, second_tabs, metadata, [r["source"] for r in source_reads], urls, read_errors)
+            assessment = assess_completeness(data, metadata, transport, reporting_date=reporting_date, prior_date=prior_date, meeting_date=meeting_date)
+        print("ASSESSMENT " + json.dumps(assessment, sort_keys=True), flush=True)
+        report = blocked_report(assessment, metadata, source_reads, str(exc), failed=not isinstance(exc, CompletenessError))
+        invalidate(output, f"Fetch/validation/publication failed: {exc}", report_text=report)
         raise
 
 

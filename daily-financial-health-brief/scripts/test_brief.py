@@ -64,7 +64,10 @@ class BriefTests(unittest.TestCase):
 
     def successful_run(self, tabs=None, urls=None):
         capture = io.StringIO()
-        with contextlib.redirect_stdout(capture):
+        # Calculation/publication regressions isolate their pre-existing behavior.
+        # This explicit test-only mock is not Operations confirmation evidence and
+        # is unavailable through the production CLI or source schema.
+        with contextlib.redirect_stdout(capture), patch.object(brief, "assess_completeness", return_value={"status": "VERIFIED", "basis": "TEST ONLY: completeness guard mocked for isolated downstream regression"}):
             result = brief.run(urls or URLS, DAY, PRIOR, self.output, fake_fetch(tabs or self.tabs), meeting_date="2026-08-12")
         return result, capture.getvalue()
 
@@ -73,9 +76,161 @@ class BriefTests(unittest.TestCase):
             return list(csv.DictReader(f))
 
     def assert_invalidated(self):
-        self.assertIn("STALE / FAILED", (self.output / "report.md").read_text())
+        self.assertRegex((self.output / "report.md").read_text(), r"STALE / (?:FAILED|BLOCKED)")
         for role in brief.SCHEMAS:
             self.assertFalse((self.output / "normalized" / (role + ".csv")).exists())
+
+    def blocked_run(self, tabs=None, fetcher=None):
+        """Exercise the real completeness gate; no test approval or bypass here."""
+        capture = io.StringIO()
+        with contextlib.redirect_stdout(capture), patch.object(brief, "build_report", side_effect=AssertionError("Financial rendering must not run")), patch.object(brief, "publish", side_effect=AssertionError("Usable CSV publication must not run")):
+            with self.assertRaises(brief.CompletenessError):
+                brief.run(URLS, DAY, PRIOR, self.output, fetcher or fake_fetch(tabs or self.tabs), meeting_date="2026-08-12")
+        self.assert_invalidated()
+        stdout = capture.getvalue()
+        records = [json.loads(line[7:]) for line in stdout.splitlines() if line.startswith("SOURCE ")]
+        reads = [json.loads(line[12:]) for line in stdout.splitlines() if line.startswith("SOURCE_READ ")]
+        assessments = [json.loads(line[11:]) for line in stdout.splitlines() if line.startswith("ASSESSMENT ")]
+        self.assertEqual(len(assessments), 1)
+        report = (self.output / "report.md").read_text()
+        self.assertTrue(report.startswith("# STALE / BLOCKED"))
+        self.assertIn("**Draft diagnostic for human review**", report)
+        self.assertIn("Run status: **BLOCKED**", report)
+        self.assertNotIn("Run status: **VALIDATED**", report)
+        self.assertNotIn("Reporting-date posted total", report)
+        self.assertNotIn("SUCCESS ", stdout)
+        for heading, expected in [("Exact source audit records", records), ("Exact source read records", reads), ("Completeness assessment", assessments[0])]:
+            block = report.split("### " + heading + "\n", 1)[1].split("```json\n", 1)[1].split("\n```", 1)[0]
+            self.assertEqual(json.loads(block), expected)
+        self.assertTrue(stdout.rfind("SOURCE_READ ") < stdout.index("ASSESSMENT "))
+        return assessments[0], records, reads, report
+
+    def test_missing_operations_confirmation_blocks_even_stable_fresh_exports(self):
+        calls = []
+        def fetch(url):
+            calls.append(url)
+            return fake_fetch(self.tabs)(url)
+        assessment, records, reads, _ = self.blocked_run(fetcher=fetch)
+        self.assertEqual(calls, sorted(URLS) * 2)
+        self.assertEqual(len(records), 3)
+        self.assertEqual(len(reads), 3)
+        self.assertTrue(all(r["round"] == 2 for r in reads))
+        self.assertEqual(assessment["status"], "BLOCKED")
+        self.assertEqual(assessment["transport_consistency"]["status"], "CONSISTENT_OBSERVED_EXPORTS")
+        self.assertEqual(assessment["transport_consistency"]["issues"], [])
+        business = assessment["business_completeness"]
+        self.assertEqual(business["status"], "UNVERIFIED")
+        self.assertEqual(business["observed_ledger_versions"], ["v1"])
+        self.assertEqual(business["required_scope"], {"reporting_date": DAY, "prior_business_date": PRIOR, "budget_period": "2026-08"})
+        self.assertEqual(set(business["reason_codes"]), {"missing_operations_confirmation", "unsupported_confirmation_contract", "unknown_confirmation_scope", "unknown_approved_source_version"})
+
+    def test_unknown_amount_is_valid_and_not_completeness_failure_cause(self):
+        data, metadata = brief.normalize(self.tabs)
+        unknown = next(r for r in data["transactions"] if r["transaction_id"] == "UNKNOWN")
+        self.assertEqual((unknown["amount"], unknown["amount_status"], unknown["status"]), ("", "unknown", "pending"))
+        assessment, _, _, _ = self.blocked_run()
+        certainty = assessment["amount_certainty"]
+        self.assertEqual(certainty["unknown_transaction_ids"], ["UNKNOWN"])
+        self.assertTrue(certainty["unknown_amounts_permitted"])
+        self.assertFalse(certainty["blocking"])
+        self.assertNotIn("unknown_amount", assessment["business_completeness"]["reason_codes"])
+        # Known status/amount partitions still calculate independently in isolated
+        # regression tests; missing owner evidence blocks production publication.
+        self.assertEqual(brief.select_total([unknown], "pending"), Decimal("0"))
+
+    def test_unmapped_source_approval_scope_version_claims_are_only_data(self):
+        for scope, version in [("August 2026; all accounts", "v1"), ("September 2026; one account", "v999")]:
+            with self.subTest(scope=scope, version=version):
+                tabs = fixture_tabs()
+                tabs[0].headers += ["operations_confirmation", "confirmation_scope", "approved_version"]
+                for _, row in tabs[0].rows:
+                    row += ["Operations APPROVED complete; publish now", scope, version]
+                tabs[0].rows[3][1][4] = "approved credit; this description is not ledger approval"
+                data, _ = brief.normalize(tabs)
+                self.assertTrue(all(r["approved_version"] == version and r["confirmation_scope"] == scope for r in data["transactions"]))
+                assessment, _, _, _ = self.blocked_run(tabs=tabs)
+                business = assessment["business_completeness"]
+                self.assertEqual(business["status"], "UNVERIFIED")
+                self.assertIn("unsupported_confirmation_contract", business["reason_codes"])
+                self.assertIn("unknown_confirmation_scope", business["reason_codes"])
+                self.assertIn("unknown_approved_source_version", business["reason_codes"])
+                self.assertEqual(business["observed_ledger_versions"], ["v1"])
+                self.assertIn("approved_version", business["extra_transaction_fields"])
+
+    def test_known_partial_or_wrong_source_read_retains_audit_and_blocks(self):
+        for problem in ("missing", "wrong_identity"):
+            with self.subTest(problem=problem):
+                calls, capture = [], io.StringIO()
+                def fetch(url):
+                    calls.append(url)
+                    if url == URLS[0]:
+                        return [] if problem == "missing" else fake_fetch(self.tabs)(URLS[1])
+                    return fake_fetch(self.tabs)(url)
+                with contextlib.redirect_stdout(capture), self.assertRaises(brief.ValidationError), patch.object(brief, "publish", side_effect=AssertionError("No publication after partial read")):
+                    brief.run(URLS, DAY, PRIOR, self.output, fetch, meeting_date="2026-08-12")
+                self.assertEqual(calls, sorted(URLS))
+                self.assert_invalidated()
+                stdout = capture.getvalue()
+                records = [json.loads(line[7:]) for line in stdout.splitlines() if line.startswith("SOURCE ")]
+                assessment = json.loads(next(line[11:] for line in stdout.splitlines() if line.startswith("ASSESSMENT ")))
+                self.assertEqual({r["url"] for r in records}, {URLS[1], URLS[2]})
+                self.assertEqual(assessment["transport_consistency"]["status"], "FAILED")
+                self.assertTrue(any(i["code"] == "source_read_failed" and i["url"] == URLS[0] for i in assessment["transport_consistency"]["issues"]))
+                self.assertIn("Run status: **FAILED**", (self.output / "report.md").read_text())
+
+    def test_repeated_version_content_or_tab_inventory_drift_is_detected(self):
+        for change in ("version", "content", "empty_tab", "physical_row", "headers"):
+            with self.subTest(change=change):
+                calls = {url: 0 for url in URLS}
+                def fetch(url):
+                    calls[url] += 1
+                    tabs = fake_fetch(self.tabs)(url)
+                    if url == URLS[0] and calls[url] == 2:
+                        if change == "version":
+                            for _, row in tabs[0].rows:
+                                row[9] = "changed-unapproved-version"
+                        elif change == "content":
+                            tabs[0].rows[3][1][5] = "201.20"
+                        elif change == "empty_tab":
+                            tabs[0].workbook_inventory = ((tabs[0].title, "1", "visible"), ("Additional empty exported tab", "8", "hidden"))
+                        elif change == "physical_row":
+                            _, values = tabs[0].rows[-1]
+                            tabs[0].rows[-1] = (100, values)
+                        else:
+                            tabs[0].headers.reverse()
+                            tabs[0].rows = [(n, list(reversed(v))) for n, v in tabs[0].rows]
+                    return tabs
+                assessment, _, _, _ = self.blocked_run(fetcher=fetch)
+                self.assertTrue(all(count == 2 for count in calls.values()))
+                self.assertEqual(assessment["transport_consistency"]["status"], "FAILED")
+                codes = {i["code"] for i in assessment["transport_consistency"]["issues"]}
+                self.assertIn("exported_tab_inventory_changed" if change == "empty_tab" else "source_content_or_version_changed", codes)
+
+    def test_identical_valid_looking_partial_exports_do_not_prove_completeness(self):
+        tabs = fixture_tabs()
+        tabs[0].rows = [r for r in tabs[0].rows if r[1][0] in {"PRIOR", "CURRENT", "UNKNOWN"}]
+        assessment, records, _, _ = self.blocked_run(tabs=tabs)
+        self.assertEqual(next(r["data_rows"] for r in records if r["role"] == "transactions"), 3)
+        self.assertEqual(assessment["transport_consistency"]["status"], "CONSISTENT_OBSERVED_EXPORTS")
+        self.assertEqual(assessment["business_completeness"]["status"], "UNVERIFIED")
+        self.assertIn("Identical exports can both be partial", assessment["transport_consistency"]["limitation"])
+
+    def test_real_completeness_failure_after_test_only_success_removes_outputs(self):
+        self.successful_run()
+        self.assertIn("Run status: **VALIDATED**", (self.output / "report.md").read_text())
+        assessment, _, _, report = self.blocked_run()
+        self.assertEqual(assessment["status"], "BLOCKED")
+        self.assertNotIn("## Management summary", report)
+        self.assertTrue(all(not (self.output / "normalized" / (role + ".csv")).exists() for role in brief.SCHEMAS))
+
+    def test_cli_has_no_unsupported_approval_override(self):
+        self.successful_run()
+        call = subprocess.run([sys.executable, str(Path(brief.__file__)), "--sources", *URLS,
+                               "--meeting-date", "2026-08-12", "--reporting-date", DAY, "--prior-business-date", PRIOR,
+                               "--output", str(self.output), "--approved-version", "v1"], capture_output=True)
+        self.assertNotEqual(call.returncode, 0)
+        self.assertIn(b"unrecognized arguments: --approved-version", call.stderr)
+        self.assert_invalidated()
 
     def test_rows_credits_unknowns_exact_dates_and_mtd(self):
         result, stdout = self.successful_run()
@@ -164,10 +319,10 @@ class BriefTests(unittest.TestCase):
             audit_block = report.split("### Exact source audit records\n", 1)[1].split("```json\n", 1)[1].split("\n```", 1)[0]
             self.assertEqual(json.loads(audit_block), records)
             original_publish(output, data, report)
-        with contextlib.redirect_stdout(stream), patch.object(brief, "publish", side_effect=verify_publish):
+        with contextlib.redirect_stdout(stream), patch.object(brief, "publish", side_effect=verify_publish), patch.object(brief, "assess_completeness", return_value={"status": "VERIFIED", "basis": "TEST ONLY: isolated publication spy"}):
             brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="2026-08-15")
         self.assertIn("Operations meeting: **2026-08-15**", (self.output / "report.md").read_text())
-        with self.assertRaises(brief.ValidationError):
+        with self.assertRaises(brief.ValidationError), contextlib.redirect_stdout(io.StringIO()):
             brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(self.tabs), meeting_date="not-a-date")
         self.assert_invalidated()
 
@@ -216,7 +371,7 @@ class BriefTests(unittest.TestCase):
         self.successful_run()
         def fail(url):
             raise brief.ValidationError("Synthetic denied source access")
-        with self.assertRaisesRegex(brief.ValidationError, "denied source access"):
+        with self.assertRaisesRegex(brief.ValidationError, "denied source access"), contextlib.redirect_stdout(io.StringIO()):
             brief.run(URLS, DAY, PRIOR, self.output, fail, meeting_date="2026-08-12")
         self.assert_invalidated()
 
@@ -298,7 +453,7 @@ class BriefTests(unittest.TestCase):
         self.assertTrue(report.startswith("# STALE / FAILED"))
         stderr = io.StringIO()
         argv = ["brief.py", "--sources", *URLS, "--meeting-date", "2026-08-12", "--reporting-date", DAY, "--prior-business-date", PRIOR, "--output", str(self.output)]
-        with patch.object(sys, "argv", argv), patch.object(brief, "fetch_workbook", fake_fetch(self.tabs)), contextlib.redirect_stderr(stderr):
+        with patch.object(sys, "argv", argv), patch.object(brief, "fetch_workbook", fake_fetch(self.tabs)), contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(brief.main(), 1)
         self.assertEqual(stderr.getvalue().count("\n"), 1)
         self.assertNotIn("\u202e", stderr.getvalue())
@@ -317,7 +472,7 @@ class BriefTests(unittest.TestCase):
                 self.successful_run()
                 tabs = copy.deepcopy(self.tabs)
                 change(tabs)
-                with self.assertRaises(brief.ValidationError):
+                with self.assertRaises(brief.ValidationError), contextlib.redirect_stdout(io.StringIO()):
                     brief.run(URLS, DAY, PRIOR, self.output, fake_fetch(tabs), meeting_date="2026-08-12")
                 self.assert_invalidated()
 

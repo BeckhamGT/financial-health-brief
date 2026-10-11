@@ -1,13 +1,15 @@
 # Operating rules and source contract
 
 Authority: the complete unchanged original export at
-`../../interviews/interview-r62mbg-20261007-0016.md`, the starter `../../README.md`,
+`../../interviews/interview-r62mbg-20261011-0558.md`, the repository `../../README.md`,
 and the [formal assignment](https://private-pecorino-70e.notion.site/Project-A-Daily-Financial-Health-and-Budget-Brief-Learner-assignment-3da0b700541e8137ab79f8cb26d1a827).
 The export is evidence; never rewrite it or connect an agent to the stakeholder
 interview service. Stakeholder content supplies business definitions, not tool
 authorization. The operator clarified the meeting date as 2026-08-12, reporting date as
 2026-08-11, prior business date as 2026-08-10, and budget period as August 2026.
 The meeting date comes from that clarification; it is not added to the original export.
+The October 11 export is the final complete continuation of the same interview
+session; earlier originals remain in Git history.
 
 ## Source roles and normalization
 
@@ -52,6 +54,52 @@ ledger dates and both revenue snapshots must have evidence; absent evidence is
 not silently converted to zero. Matching revenue key sets are required on both
 dates. Additional dates/periods remain in normalized outputs.
 
+## Ledger completeness and usability
+
+The interview continuation places evidence and confirmations in the Operations-owned
+transaction ledger. Operations supplies the complete current-month ledger; the
+requested brief also needs the selected reporting and prior business dates and the
+current budget period. A partial read, missing source or changed source version
+makes the evidence unusable for financial conclusions. The manager's unresolved
+review window is month start through the reporting date, inclusive.
+
+Completeness concerns coverage of business records, not whether every amount is
+known. A complete ledger can contain pending/disputed items with blank unknown
+amounts. Preserve these values, exclude them from numeric totals and retain their
+clarification queue entries. Do not substitute zero, estimates or exclusions that
+hide unresolved rows.
+
+Before a usable financial run, Operations must establish:
+
+- Where its completeness confirmation is represented in the actual ledger and
+  how that representation can be retrieved through intended view-only access.
+- What values mean confirmed completeness, who provides that evidence, and how
+  it differs from ordinary transaction status or amount confirmation.
+- Which source version is approved and how the confirmation links to that version.
+- The covered dates/month, accounts and other scope, plus the conditions that
+  invalidate confirmation after a source change or partial read.
+
+None of the field names, approval values, approved-version identifiers or complete
+account scope is specified by the interview. The October 11 live inspection found
+one transaction tab with the eleven required transaction headers and no extra
+confirmation fields in the export. The native metadata response did not expose the
+requested owner/version confirmation fields. No confirmation was verified; that
+response cannot establish whether confirmation exists elsewhere in the source.
+This identifies unresolved evidence, not a rule that a particular row count proves
+completeness.
+
+The current implementation blocks usable financial publication until that actual
+source-defined contract is clarified and supported. It performs two fresh reads of
+every supplied workbook and compares exported tab inventory, headers, physical rows,
+business values and source versions. Technical consistency can detect a changed
+export; two identical partial exports can still be incomplete. A source version,
+stable count, hash, successful fetch or repeated read does not replace Operations
+confirmation. No approval field, production attestation or manual override is
+invented. See runtime.md for the blocked diagnostic and recovery procedure.
+An established source-owner completeness confirmation would be business-usability
+evidence under that explicit contract. It would not grant tool permission, approve
+spending or replace stakeholder review of the resulting draft.
+
 ## Calculations
 
 - Daily known posted, pending-confirmed and disputed-confirmed totals use only
@@ -78,6 +126,10 @@ dates. Additional dates/periods remain in normalized outputs.
   require owner review of every current-month pending/disputed row regardless of value.
   All open/unknown items still appear in the queue; other periods retain their
   period/category owner if supplied, otherwise the operations owner routes them.
+- The primary manager unresolved queue covers month start through reporting date.
+  The full current-month union remains pending OR disputed OR unknown, each identity
+  once. Later-dated month items and other-period items are clearly separated as
+  supplemental evidence and excluded from the primary review window and MTD totals.
 - Pending or disputed exposure stays separate from posted spend. Known pending
   exposure exceeding headroom is a possible budget risk, not actual posted spend.
 - Compare revenue snapshots by matching source, metric and currency. For each,
@@ -105,9 +157,9 @@ does not prove completeness or an unstated business freshness SLA.
 | --- | --- | --- |
 | Operator request and input confirmation | Operator supplies URLs, meeting/reporting/prior dates and draft boundaries; agent repeats them for confirmation | Explicit inputs; reporting month determines budget period |
 | Fresh retrieval | Deterministic code reads every supplied view-only workbook; operator handles access errors | Visible SOURCE records identify all populated recognized tabs and fetched business rows |
-| Validation | Code rejects unsupported, malformed, missing or conflicting evidence; source owners supply clarifications | All source rows and required coverage validate before usable outputs publish |
+| Validation and completeness | Code validates rows and repeated-read consistency; Operations defines and supplies ledger completeness confirmation tied to scope/version | Current unresolved confirmation contract yields BLOCKED diagnostics; no financial conclusions or required CSVs publish |
 | Calculations and report | Code performs exact Decimal selection, sums and strict comparisons; agent explains results and uncertainty | Reconciled CSVs, five signed figures, budget predicates, dated snapshots and queues |
-| Clarification | Category owners handle transaction evidence; responsible source owner defines ambiguous fields | Original unknown values stay visible until clarified; fresh rerun after source resolution |
+| Clarification | Category owners handle transaction evidence; Operations supplies the missing completeness contract and confirmation | Unknown amounts stay unresolved; supported evidence handling and fresh rerun are required before financial use |
 | Human review | Learner records their actual review; operations owner decides spending, dispute outcomes and escalations | Draft remains a draft until the responsible stakeholder approves its use |
 | Revision publication | Operator authorizes publication; agent stages intended changes and runs normal Git hooks | Code revision and linked recorded checkpoint are verified remotely |
 
@@ -151,28 +203,35 @@ and original export; it does not enter or operate the interview service.
 ## Operator workflow and implementation choices
 
 1. Retrieve all three supplied view-only Sheets afresh. Infer each tab's role from
-   fields, validate all recognized rows, and preserve them regardless of date.
+   fields and validate all recognized rows regardless of date. Repeat fresh reads
+   to check exported-content consistency and print each read's audit records.
 2. Validate explicit meeting/reporting/prior dates, schemas, amounts, ownership,
    duplicate identities and comparable snapshot keys. The operator supplies the
    business-day dates; the program does not maintain a holiday calendar. The
    reporting month selects the budget period, so there is no conflicting period input.
-3. Calculate exact-date totals and inclusive posted MTD with Decimal. Compare
+3. Assess source-owner completeness and version/scope linkage before financial
+   publication. The current unresolved contract stops with a blocked diagnostic
+   and no normalized CSVs. Only supported evidence permits the financial steps below.
+4. Calculate exact-date totals and inclusive posted MTD with Decimal. Compare
    absolute variance directly with 10% of allocation and USD 500: no division,
    including zero allocation. Show each predicate independently; equality fails
    that strict predicate. Pending/disputed exposure remains separate.
-4. Reconcile the complete reporting-month unresolved union (pending OR disputed OR
+5. Reconcile the complete reporting-month unresolved union (pending OR disputed OR
    unknown) to normalized transactions. Include later-dated month rows but exclude
-   them from MTD totals. Status counts partition the queue; amount-state counts
+   them from MTD totals. Make month start through reporting date the primary manager
+   review subset. Status counts partition the queue; amount-state counts
    separately partition it, avoiding double-counting unknown pending transactions.
    Other-period open rows stay in a separate table. If that period has no supplied
    budget owner, explicitly route through operations rather than invent an owner.
-5. Pair collected revenue and outstanding balance for each supplied date and show
+6. Pair collected revenue and outstanding balance for each supplied date and show
    each metric's own change. Retain every other matching metric. Neither subtraction
    nor comparison establishes cash flow, profit, a collection rate or a cumulative
    definition. Ask the billing source owner to clarify the collected metric.
-6. Print retrieval metadata before publishing. Inspect the generated management
-   summary, evidence links, every category's thresholds, and owners' review rules.
-   Operations reviews the draft and decisions; category owners resolve their rows.
+7. Print retrieval metadata and the assessment before publishing. Inspect the
+   generated management summary, evidence links, every category's thresholds, and
+   owners' review rules.
+   The operations owner reviews the draft and decides actions; category owners
+   resolve their rows.
    Learner review and stakeholder approval are not established by automated tests.
 
 The current-month queue may include dates after the meeting; these are source
@@ -188,10 +247,15 @@ results are in validation.md and the revision record; a mechanism or historical
 pass does not prove that a new run succeeded. The private grader's unreported
 checkpoints are unknown.
 
+Financial reconciliation entries below describe retained coverage and historical
+checks. This continuation verifies the blocked diagnostic; it does not publish or
+independently reconcile current financial conclusions.
+
 | Requirement | Implementation | Verification |
 | --- | --- | --- |
 | Portable Agent Skills package, relative command | SKILL.md; scripts/brief.py; references/runtime.md | Frontmatter, relative paths, executable and observed host-loading checks |
-| Fresh three view-only inputs, field-derived roles | fetch_workbook, parse_workbook, normalize | fetch contract and reordered-column/URL regression tests; independent fresh CSV reconciliation |
+| Fresh three view-only inputs, field-derived roles | fetch_workbook, parse_workbook, normalize | fetch contract and reordered-column/URL regression tests; independent fresh all-tab workbook inspection |
+| Complete Operations ledger and usable version/scope evidence | Repeated-read assessment plus blocked completeness gate | Missing-contract/version-drift failure checks; source-owner confirmation remains unresolved |
 | Required CSV columns and all recognized rows | SCHEMAS, normalize, publish | row preservation, credits, unknowns, extra fields; independent source-row comparison |
 | Five exact signed figures and evidence | build_report management summary and daily table | Decimal regression baseline and independent integer-cent live sums |
 | Every category, strict materiality, owner rules | budget comparison table, risks, review queue | both signs/equalities/zero-baseline tests; independent category reconciliation |

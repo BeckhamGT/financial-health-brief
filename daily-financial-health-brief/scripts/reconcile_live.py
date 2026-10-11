@@ -4,6 +4,8 @@
 Uses its own standard-library XLSX reader and integer-cent spend arithmetic.
 No production imports, cached business inputs, source edits or output publication.
 Every populated tab, including hidden tabs, is checked by original physical row.
+Financial verification cannot pass without a supported Operations confirmation
+contract. --verify-blocked checks only the diagnostic and its technical evidence.
 """
 import argparse
 import csv
@@ -35,6 +37,10 @@ FIGURES = ['Reporting-date posted total', 'Reporting-date pending-confirmed tota
            'Reporting-date disputed-confirmed total', 'Prior-business-day posted total',
            'Reporting-date posted minus prior-business-day posted']
 VALID_STATUS = 'Run status: **VALIDATED**. Currency for spend/budget figures: USD. Unknown amounts remain unknown.'
+BLOCKED_TITLE = '# STALE / BLOCKED — no usable financial brief'
+BLOCKED_DRAFT = '**Draft diagnostic for human review**'
+COMPLETENESS_GAPS = ['missing_operations_confirmation', 'unsupported_confirmation_contract',
+                     'unknown_confirmation_scope', 'unknown_approved_source_version']
 
 
 def check(condition, message):
@@ -248,17 +254,23 @@ def compare_csvs(output, data):
                 check(actual[key][field] == row.get(field, ''), role + ': source field differs at ' + repr(key) + ' field ' + field)
 
 
-def report_structure(report):
-    """Recognize authored markers/headings only outside fenced source-data JSON."""
-    lines = report.splitlines()
-    check(lines and lines[0] == '# Daily financial health brief', 'Report is stale/failed or lacks its authored title')
+def visible_report_lines(report):
+    """Exclude fenced source-data records when reading authored report markers."""
     visible, fenced = [], False
-    for line in lines:
+    for line in report.splitlines():
         if line.startswith('```'):
             fenced = not fenced
         elif not fenced:
             visible.append(line)
     check(not fenced, 'Unclosed report data fence')
+    return visible
+
+
+def report_structure(report):
+    """Recognize authored markers/headings only outside fenced source-data JSON."""
+    lines = report.splitlines()
+    check(lines and lines[0] == '# Daily financial health brief', 'Report is stale/failed or lacks its authored title')
+    visible = visible_report_lines(report)
     check(visible.count('**Draft for human review**') == 1, 'Missing/forged draft marker')
     markers = [line for line in visible if line.startswith('Run status:')]
     check(markers == [VALID_STATUS], 'Missing/forged/failed top-level run status')
@@ -307,15 +319,45 @@ def tables(lines):
     return found
 
 
-def metadata_from_report(report):
-    lines = section(report, 'Exact source audit records', 3)
+def structured_section(report, title):
+    lines = section(report, title, 3)
     openings = [index for index, line in enumerate(lines) if line == '```json']
     endings = [index for index, line in enumerate(lines) if line == '```']
     check(len(openings) == len(endings) == 1 and openings[0] < endings[0],
           'Missing exact structured source audit data')
-    records = json.loads('\n'.join(lines[openings[0] + 1:endings[0]]))
+    return json.loads('\n'.join(lines[openings[0] + 1:endings[0]]))
+
+
+def metadata_from_report(report):
+    records = structured_section(report, 'Exact source audit records')
     check(isinstance(records, list), 'Source audit data must be an array')
     return records
+
+
+def index_metadata(items):
+    check(isinstance(items, list), 'Source audit records must be an array')
+    indexed = {}
+    for record in items:
+        check(isinstance(record, dict) and set(record) == META_KEYS, 'Incomplete/unsupported source audit record')
+        check(all(isinstance(record[key], str) and record[key] for key in META_KEYS - {'source_versions', 'data_rows'}), 'Invalid source audit field type')
+        check(type(record['data_rows']) is int and record['data_rows'] > 0, 'Invalid source row count')
+        versions = record['source_versions']
+        check(isinstance(versions, list) and versions and all(isinstance(v, str) and v for v in versions) and versions == sorted(set(versions)), 'Invalid actual source versions')
+        check(re.fullmatch('[0-9a-f]{64}', record['content_sha256']) is not None, 'Invalid source content hash')
+        stamp = datetime.fromisoformat(record['fetched_at'])
+        check(stamp.utcoffset() == timedelta(0), 'Fetch timestamp must identify UTC')
+        check(sheet_id(record['url']) == record['spreadsheet_id'], 'Metadata spreadsheet identity differs')
+        key = (record['url'], record['tab'])
+        check(key not in indexed, 'Duplicate source audit tab identity')
+        indexed[key] = record
+    return indexed
+
+
+def match_fresh_metadata(published, fresh):
+    check(set(published) == set(fresh), 'Fresh workbook populated tabs differ from published audit; source drift or incomplete publication')
+    for identity, current in fresh.items():
+        for key in META_KEYS - {'fetched_at'}:
+            check(published[identity][key] == current[key], 'Fresh source drift or publication mismatch for ' + repr(identity) + ' field ' + key + '; regenerate with fresh sources')
 
 
 def compare_metadata(report, run_log, fresh):
@@ -329,29 +371,98 @@ def compare_metadata(report, run_log, fresh):
             check(not success, 'SOURCE output appeared after publication success')
             records.append(json.loads(line[len('SOURCE '):]))
     check(success and records, 'Missing actual production SOURCE/success output')
-    def index(items):
-        indexed = {}
-        for record in items:
-            check(isinstance(record, dict) and set(record) == META_KEYS, 'Incomplete/unsupported source audit record')
-            check(all(isinstance(record[key], str) and record[key] for key in META_KEYS - {'source_versions', 'data_rows'}), 'Invalid source audit field type')
-            check(type(record['data_rows']) is int and record['data_rows'] > 0, 'Invalid source row count')
-            versions = record['source_versions']
-            check(isinstance(versions, list) and versions and all(isinstance(v, str) and v for v in versions) and versions == sorted(set(versions)), 'Invalid actual source versions')
-            check(re.fullmatch('[0-9a-f]{64}', record['content_sha256']) is not None, 'Invalid source content hash')
-            stamp = datetime.fromisoformat(record['fetched_at'])
-            check(stamp.utcoffset() == timedelta(0), 'Fetch timestamp must identify UTC')
-            check(sheet_id(record['url']) == record['spreadsheet_id'], 'Metadata spreadsheet identity differs')
-            key = (record['url'], record['tab'])
-            check(key not in indexed, 'Duplicate source audit tab identity')
-            indexed[key] = record
-        return indexed
-    production, displayed, independently_read = index(records), index(metadata_from_report(report)), index(fresh)
+    production, displayed, independently_read = index_metadata(records), index_metadata(metadata_from_report(report)), index_metadata(fresh)
     check(production == displayed, 'Actual SOURCE stdout records do not exactly match report source metadata')
-    check(set(production) == set(independently_read), 'Fresh workbook populated tabs differ from published audit; source drift or incomplete publication')
-    for identity, current in independently_read.items():
-        for key in META_KEYS - {'fetched_at'}:
-            check(production[identity][key] == current[key], 'Fresh source drift or publication mismatch for ' + repr(identity) + ' field ' + key + '; regenerate with fresh sources')
+    match_fresh_metadata(production, independently_read)
     return records
+
+
+def verify_blocked_result(report, run_log, fresh, data, output, reporting_date, prior_date, meeting_date):
+    """Verify a diagnostic and its fresh reads, without endorsing financial use."""
+    visible = visible_report_lines(report)
+    check(visible and visible[0] == BLOCKED_TITLE, 'Blocked verification requires the authored STALE / BLOCKED diagnostic')
+    check(visible.count(BLOCKED_DRAFT) == 1, 'Missing/forged blocked diagnostic draft label')
+    check([line for line in visible if line.startswith('Run status:')] == ['Run status: **BLOCKED**.'],
+          'Missing/forged blocked diagnostic run status')
+    check('**Draft for human review**' not in visible and VALID_STATUS not in visible,
+          'Blocked diagnostic must not present a validated financial draft')
+    check(not any(label in line for label in FIGURES for line in visible),
+          'Blocked diagnostic must not publish the required financial figures')
+    for role in FIELDS:
+        path = output / 'normalized' / (role + '.csv')
+        check(not path.exists() and not path.is_symlink(), 'Blocked run left a required normalized CSV: ' + role)
+    primary, repeated, assessment_records, stage = [], [], [], 0
+    for line in run_log.splitlines():
+        check(not line.startswith('SUCCESS '), 'Blocked run stdout must not claim production SUCCESS')
+        if line.startswith('SOURCE '):
+            check(stage == 0, 'First-read SOURCE appeared after a later round/assessment')
+            primary.append(json.loads(line[len('SOURCE '):]))
+        elif line.startswith('SOURCE_READ '):
+            check(stage <= 1, 'SOURCE_READ appeared after completeness assessment')
+            stage = 1
+            repeated.append(json.loads(line[len('SOURCE_READ '):]))
+        elif line.startswith('ASSESSMENT '):
+            check(stage == 1, 'Assessment requires complete first and repeated source-read records')
+            stage = 2
+            assessment_records.append(json.loads(line[len('ASSESSMENT '):]))
+    check(primary and repeated and len(assessment_records) == 1, 'Missing actual SOURCE/SOURCE_READ/ASSESSMENT stdout records')
+    first_index = index_metadata(primary)
+    check(first_index == index_metadata(metadata_from_report(report)), 'First-read SOURCE stdout does not exactly match diagnostic metadata')
+    displayed_reads = structured_section(report, 'Exact source read records')
+    check(isinstance(displayed_reads, list) and displayed_reads == repeated, 'Repeated SOURCE_READ stdout does not exactly match diagnostic metadata')
+    for envelope in repeated:
+        check(isinstance(envelope, dict) and set(envelope) == {'round', 'source'} and
+              type(envelope['round']) is int and envelope['round'] == 2,
+              'Unsupported source-read round/envelope')
+    second_index = index_metadata([envelope['source'] for envelope in repeated])
+    fresh_index = index_metadata(fresh)
+    match_fresh_metadata(first_index, fresh_index)
+    match_fresh_metadata(second_index, fresh_index)
+    for identity, repeated_source in second_index.items():
+        check(datetime.fromisoformat(repeated_source['fetched_at']) > datetime.fromisoformat(first_index[identity]['fetched_at']),
+              'Second read must have its own later fetch timestamp')
+    assessment = structured_section(report, 'Completeness assessment')
+    check(assessment == assessment_records[0] and isinstance(assessment, dict), 'ASSESSMENT stdout does not exactly match diagnostic assessment')
+    check(set(assessment) == {'status', 'business_completeness', 'transport_consistency', 'amount_certainty',
+                              'requested_meeting_date', 'publication'} and
+          assessment['status'] == 'BLOCKED', 'Unsupported/incorrect blocked completeness assessment')
+    business = assessment['business_completeness']
+    scope = {'reporting_date': reporting_date, 'prior_business_date': prior_date, 'budget_period': reporting_date[:7]}
+    ledger_versions = sorted({row['source_version'] for row in data['transactions']})
+    expected_business = {'status': 'UNVERIFIED', 'reason_codes': COMPLETENESS_GAPS,
+                         'required_scope': scope, 'observed_ledger_versions': ledger_versions}
+    check(isinstance(business, dict) and set(business) == set(expected_business) |
+          {'responsible_owner', 'confirmation_contract', 'extra_transaction_fields', 'interpretation'} and
+          all(business[key] == value for key, value in expected_business.items()),
+          'Missing confirmation/scope/approved-version assessment differs or claims completeness')
+    extras = sorted(set().union(*(row.keys() for row in data['transactions'])) - set(FIELDS['transactions']) - set(ORIGIN))
+    check(business['responsible_owner'] == 'Operations team / transaction-ledger source owner' and
+          business['extra_transaction_fields'] == extras and
+          isinstance(business['confirmation_contract'], str) and business['confirmation_contract'].startswith('Not supplied:') and
+          isinstance(business['interpretation'], str) and bool(business['interpretation']),
+          'Unsupported confirmation contract or source field inventory in assessment')
+    transport = assessment['transport_consistency']
+    check(isinstance(transport, dict) and set(transport) == {'status', 'checks', 'issues', 'limitation'} and
+          transport['status'] == 'CONSISTENT_OBSERVED_EXPORTS' and
+          isinstance(transport['checks'], list) and transport['issues'] == [] and
+          isinstance(transport['limitation'], str) and bool(transport['limitation']),
+          'Missing-confirmation verification requires complete consistent observed exports')
+    unknown_ids = sorted(row['transaction_id'] for row in data['transactions'] if row['amount_status'] == 'unknown')
+    amounts = assessment['amount_certainty']
+    check(isinstance(amounts, dict) and set(amounts) == {'unknown_amounts_permitted', 'blocking', 'unknown_transaction_ids', 'interpretation'} and
+          amounts['unknown_amounts_permitted'] is True and amounts['blocking'] is False and
+          amounts['unknown_transaction_ids'] == unknown_ids and isinstance(amounts['interpretation'], str) and bool(amounts['interpretation']),
+          'Unknown amounts must remain permitted source uncertainty, separate from completeness blocking')
+    publication = assessment['publication']
+    check(assessment['requested_meeting_date'] == meeting_date and isinstance(publication, dict) and
+          set(publication) == {'financial_report', 'normalized_csvs', 'required_next_step'} and
+          publication['financial_report'] is False and publication['normalized_csvs'] is False and
+          isinstance(publication['required_next_step'], str) and bool(publication['required_next_step']),
+          'Blocked assessment must prohibit financial publication and preserve the requested meeting date')
+    return {'independent_blocked_verification': 'PASS', 'financial_reconciliation': 'NOT_PERFORMED',
+            'business_completeness': 'UNVERIFIED', 'confirmation_contract': 'UNSUPPORTED',
+            'reason_codes': list(COMPLETENESS_GAPS), 'fresh_rows': {role: len(rows) for role, rows in data.items()},
+            'fresh_unknown_transaction_ids': unknown_ids}
 
 
 def base_status(row):
@@ -447,9 +558,11 @@ def reconcile_report(report, data, meeting_date, reporting_date, prior_date):
     return {'independent_reconciliation': 'PASS', 'five_signed_USD': list(map(money, values)), 'current_month_unresolved': len(current_queue), 'other_period_unresolved': len(other_queue), 'unknown_current_month': unknown, 'rows': {role: len(rows) for role, rows in data.items()}}
 
 
-def reconcile(sources, meeting_date, reporting_date, prior_date, output, run_log, reader=None):
+def reconcile(sources, meeting_date, reporting_date, prior_date, output, run_log, reader=None, verify_blocked=False):
     """Reader injection is tests-only; CLI always makes fresh viewer requests."""
     check(len(sources) == 3 and len({sheet_id(url) for url in sources}) == 3, 'Three distinct viewer sources required')
+    iso_day(meeting_date)
+    check(iso_day(prior_date) < iso_day(reporting_date), 'Prior business date must precede reporting date')
     with localcontext() as context:
         context.prec = 50
         all_tabs = []
@@ -461,12 +574,15 @@ def reconcile(sources, meeting_date, reporting_date, prior_date, output, run_log
         for record in sorted(metadata, key=lambda r: (r['spreadsheet_id'], r['tab'])):
             print('INDEPENDENT_SOURCE ' + json.dumps(record, sort_keys=True), flush=True)
         report = (output / 'report.md').read_text(encoding='utf-8')
+        if verify_blocked:
+            result = verify_blocked_result(report, run_log.read_text(encoding='utf-8'), metadata, data, output, reporting_date, prior_date, meeting_date)
+            print(json.dumps(result, sort_keys=True), flush=True)
+            return result
         report_structure(report)
-        compare_metadata(report, run_log.read_text(encoding='utf-8'), metadata)
-        compare_csvs(output, data)
-        result = reconcile_report(report, data, meeting_date, reporting_date, prior_date)
-        print(json.dumps(result, sort_keys=True), flush=True)
-        return result
+        # The latest interview requires actual Operations confirmation, its scope
+        # and its approved ledger version. No source representation/accepted
+        # mapping has been established, so legacy VALIDATED markers are insufficient.
+        check(False, 'Financial reconciliation unavailable: no supported Operations completeness-confirmation contract; legacy or unconfirmed financial drafts cannot pass')
 
 
 def main():
@@ -477,9 +593,12 @@ def main():
     parser.add_argument('--prior-business-date', required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--run-log', type=Path, required=True)
+    parser.add_argument('--verify-blocked', action='store_true',
+                        help='Verify the STALE / BLOCKED missing-confirmation diagnostic and fresh source evidence; does not verify financial conclusions')
     args = parser.parse_args()
     try:
-        reconcile(args.sources, args.meeting_date, args.reporting_date, args.prior_business_date, args.output, args.run_log)
+        reconcile(args.sources, args.meeting_date, args.reporting_date, args.prior_business_date, args.output, args.run_log,
+                  verify_blocked=args.verify_blocked)
     except (ValueError, OSError, InvalidOperation, KeyError, TypeError) as exc:
         # Source-origin errors remain one quoted diagnostic line in capture.
         # Newlines/ANSI controls cannot forge SOURCE, SUCCESS or approval output.

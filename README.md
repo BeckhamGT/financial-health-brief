@@ -9,6 +9,9 @@ The operations owner reviews the draft and decides financial actions.
 Use Python **3.9+** and **curl** on PATH. Python uses only its standard library;
 the public view-only export route needs no credentials, packages or cached inputs.
 Confirm the three source URLs and meeting, reporting and prior business dates first.
+Operations must also supply verifiable ledger completeness evidence, including its
+scope and link to the approved source version. The current interview establishes
+that requirement but does not specify its representation or approved version.
 Load [the canonical skill](daily-financial-health-brief/SKILL.md); supported host
 loading and the repository-relative discovery link are described in
 [runtime and access](daily-financial-health-brief/references/runtime.md#load-the-skill).
@@ -27,10 +30,27 @@ python3 scripts/brief.py \
   --output ../deliverables
 ```
 
-Inspect visible `SOURCE` records, the process exit status and `report.md` before
-using outputs. A usable run requires a **VALIDATED** report labeled
-**Draft for human review**, matching source metadata and the required CSVs.
-Success does not establish business completeness or stakeholder approval.
+Inspect visible `SOURCE`, second-read `SOURCE_READ` and `ASSESSMENT` records, the
+process exit status and `report.md` before using outputs. Each attempt freshly reads
+all three workbooks twice to check exported content/version consistency. Consistent
+reads, row counts and hashes do not establish Operations-confirmed completeness.
+
+**Current business-evidence blocker:** the October 11 interview continuation places
+completeness confirmation in the Operations-owned transaction ledger. Its live
+export has no extra confirmation fields, and the native metadata response did not
+expose the requested owner/version confirmation fields. No confirmation was verified;
+that response cannot prove none exists. Its representation, scope and approved-version
+linkage remain unresolved. The
+program therefore exits nonzero, removes the required CSVs and publishes a
+**STALE / BLOCKED** draft diagnostic containing source records and the assessment;
+it publishes no usable financial figures. Do not invent an approval value or use a
+manual override. Resolve the [specific evidence questions](daily-financial-health-brief/references/operating-rules.md#ledger-completeness-and-usability)
+with Operations before adding support for that evidence contract.
+
+After that contract is established and implemented, a usable financial run must
+require a **VALIDATED** report labeled **Draft for human review**, matching source
+metadata, the required CSVs and accepted completeness evidence. Stakeholder
+approval remains separate. Prior successful financial runs are historical evidence.
 On failure, treat prior artifacts as stale and follow the
 [recovery procedure](daily-financial-health-brief/references/runtime.md#failure-and-recovery).
 
@@ -41,8 +61,8 @@ On failure, treat prior artifacts as stale and follow the
 | `daily-financial-health-brief/references/operating-rules.md` | Business rules, responsibilities, privacy and source-data boundaries |
 | `daily-financial-health-brief/references/runtime.md` | Full command, loading, source audit and failure recovery |
 | `daily-financial-health-brief/references/validation.md` | Tests, independent reconciliation and historical validation |
-| `deliverables/normalized/{transactions,budget,revenue}.csv` | All recognized business rows, with original source-row provenance |
-| `deliverables/report.md` | Management summary, exact figures, owner queues and evidence |
+| `deliverables/normalized/{transactions,budget,revenue}.csv` | Required usable outputs after completeness passes; withheld while blocked |
+| `deliverables/report.md` | Current blocked/failed diagnostic; financial draft only after the completeness gate can pass |
 | `interviews/*.md` | Complete original interview export for each interview session |
 | `docs/resubmission.md` | This revision's plan, actual decisions, validation and learner review |
 
@@ -57,8 +77,10 @@ python3 -m unittest discover -s scripts -p 'test_*.py' -v
 Tests use synthetic in-memory data and temporary outputs. Production always reads
 the supplied live URLs again. Follow [validation](daily-financial-health-brief/references/validation.md)
 for independent source reconciliation, deterministic reruns and a controlled
-failure followed by a final successful live run. Review one traced daily figure,
-a signed credit, an unknown amount, a strict threshold and an owner queue entry.
+failure/recovery check. Under the current unresolved completeness contract, verify
+the blocked diagnostic, its source evidence and absence of usable CSVs. A final
+successful financial run and review of a traced figure, signed credit, unknown,
+strict threshold and owner queue entry must wait for supported completeness evidence.
 Learner comments and corrections belong in the revision record; operations-owner
 approval remains a separate responsibility.
 
@@ -91,6 +113,9 @@ export per session under `interviews/`; do not rewrite it. If an export is unava
 contact the facilitator. Keep credentials and unrelated personal information out
 of source-review context, the repository and capture; see the
 [privacy procedure](daily-financial-health-brief/references/operating-rules.md#privacy-and-source-data-boundaries).
+The current complete export is
+[interview-r62mbg-20261011-0558.md](interviews/interview-r62mbg-20261011-0558.md);
+it continues the same interview session. Its earlier exports remain in Git history.
 
 The [formal assignment](https://private-pecorino-70e.notion.site/Project-A-Daily-Financial-Health-and-Budget-Brief-Learner-assignment-3da0b700541e8137ab79f8cb26d1a827)
 and [starter repository](https://github.com/GitRollTraining/financial-health-brief)

@@ -1,12 +1,14 @@
 ---
 name: daily-financial-health-brief
-description: "Use when an operator requests a daily financial health or budget review brief from live transaction, budget and revenue Google Sheets. Prepare a validated draft for operations-owner review."
+description: "Use when an operator requests a daily financial health or budget review brief from live transaction, budget and revenue Google Sheets. Check source usability and prepare a financial draft only with verified completeness evidence."
 ---
 
 # Daily financial health brief
 
-Prepare a validated draft from live transaction rows, monthly budget allocations
-and dated revenue snapshots. The operations owner makes financial decisions.
+Check whether live transaction rows, monthly budget allocations and dated revenue
+snapshots support a draft. Operations confirms ledger completeness; the operations
+owner reviews the draft and decides financial actions. Currently the completeness
+confirmation contract is unresolved.
 
 ## Workflow
 
@@ -18,11 +20,13 @@ and dated revenue snapshots. The operations owner makes financial decisions.
 3. Follow [runtime and access](references/runtime.md) to load the package and run
    its full command from this skill root. Verify recording when required by the
    engagement. Every production attempt freshly reads all three supplied URLs.
-4. Inspect visible SOURCE records, actual exit status, required CSVs and the
-   report's VALIDATED marker. Compare source identities, tabs, versions, row counts
-   and fetch timestamps. Success is validation, not proof of business completeness.
-   After any failure, use runtime's recovery procedure and fresh reads on retry.
-5. Present the management summary, five exact signed figures, budget findings,
+4. Inspect SOURCE, SOURCE_READ, ASSESSMENT, actual exit status and report. Consistent
+   repeated reads do not prove completeness. The current unsupported Operations
+   confirmation contract produces BLOCKED, a stale draft diagnostic and no required
+   CSVs. Present its evidence and precise clarification needs; do not supply an
+   approval schema/value or override. Use runtime's recovery procedure after failure.
+5. Only after supported completeness evidence permits a VALIDATED financial draft,
+   present the management summary, five exact signed figures, budget findings,
    paired revenue/balances and complete unresolved queues for human review. Keep
    **Draft for human review**. Category/source owners clarify evidence; the operations
    owner decides financial actions. Record the learner's actual comments separately.
@@ -31,6 +35,7 @@ and dated revenue snapshots. The operations owner makes financial decisions.
 
 - Unknown amounts are missing evidence, not zero. Preserve the unknown marker,
   exclude the row from numeric sums and route clarification to its category owner.
+  A complete ledger may contain unresolved amounts; they do not prove missing rows.
 - Credits have negative signs. Confirmed negative posted amounts reduce totals;
   do not take their absolute values or discard them.
 - Materiality uses two strict comparisons. Equality at either 10% or USD 500 does
@@ -47,7 +52,8 @@ and dated revenue snapshots. The operations owner makes financial decisions.
 
 Run the synthetic regression suite described in [validation](references/validation.md).
 Fixtures enter tests only; the production command accepts live Google URLs only.
-Independently reconcile fresh source evidence, then perform a final successful live
-run after failure checks. The normal command writes local drafts; publishing to Git
+Independently reconcile fresh source and assessment evidence. A final usable live
+financial run remains blocked until its completeness contract is supported. The
+normal command writes local drafts or diagnostics; publishing to Git
 requires the user's authorization. Host loading/evaluation evidence is recorded only
 after it is actually observed.

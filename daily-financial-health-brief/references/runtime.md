@@ -56,7 +56,7 @@ session, record that limitation. Follow engagement capture checks in each fresh 
 
 ## Source audit and success
 
-Before output publication, stdout prints one JSON SOURCE record per fetched tab:
+Before output publication, stdout prints one JSON SOURCE record per first-read tab:
 URL, spreadsheet ID, tab title, export-local ID, fetched UTC timestamp, field-derived
 role, all business source versions, nonblank data-row count and semantic SHA-256.
 The same values appear in the report. Compare records as complete metadata, not
@@ -64,17 +64,57 @@ isolated substring matches. Fetch time and content hashes supplement business
 `source_version`; neither proves source completeness. XLSX sheet IDs are export-local
 IDs, not native Google gid values.
 
-Success requires the actual program exit status 0, all required CSVs, matching audit
+After the first read validates, the production attempt freshly reads each of the
+three supplied workbooks again. The second-read records use `SOURCE_READ` JSON
+envelopes with `round: 2` and `source` containing the tab's same metadata schema.
+`ASSESSMENT` reports the
+technical read-consistency and business-evidence assessment. The diagnostic report
+preserves these exact records under **Exact source audit records**, **Exact source
+read records** and **Completeness assessment**. Compare structured records, including
+version sets, rather than matching isolated text fragments.
+
+## Current completeness blocker
+
+The October 11 interview requires Operations-confirmed ledger completeness and
+rejects changed versions, partial reads or missing sources for financial use. It
+does not define the confirmation representation, approved version, full scope or
+confirmation-validity conditions. No such confirmation was observed in the live
+transaction export. The native metadata response did not expose the requested
+owner/version fields, so it cannot establish absence of confirmation elsewhere. See
+[the precise clarification needs](operating-rules.md#ledger-completeness-and-usability).
+
+Two fresh reads compare technical exported-tab/physical-row/header/content/version
+consistency. Identical reads do not prove business completeness: the same partial
+export could appear twice. The current unsupported business-evidence contract is
+therefore always **BLOCKED**, without an invented approval field or manual override.
+Known unknown amounts remain valid unresolved data; their presence does not cause
+this completeness block.
+
+The current production command exits nonzero, leaves no required normalized CSVs
+and writes `# STALE / BLOCKED — no usable financial brief`, **Draft diagnostic for
+human review** and `Run status: **BLOCKED**.` in `report.md`. It contains source
+audit records and the assessment, with no usable daily figures or financial
+conclusions. Present that diagnostic and request Operations' evidence contract.
+A transport or parse failure instead produces a STALE / FAILED diagnostic,
+retaining successfully retrieved source audit evidence and a failed assessment
+where available. No failure permits fallback to previous business outputs.
+
+A future financial success requires a supported Operations confirmation contract,
+actual accepted evidence, program exit status 0, all required CSVs, matching audit
 records, a VALIDATED report and its Draft for human review label. Read the summary
 and unresolved queues before handoff. Point-in-time exports are separate reads;
 confirm changed inputs rather than force verification to match an older snapshot.
+Stakeholder approval remains a separate human responsibility.
 
 ## Failure and recovery
 
 Every attempt first invalidates older required outputs. All sources, row identities,
-types, rules, date coverage, category ownership and matching revenue pairs validate
-before valid artifacts are staged. CSV files publish first and the VALIDATED report
-publishes last. Invalid arguments also invalidate the selected/default destination.
+types, rules, date coverage, category ownership and matching revenue pairs validate;
+read consistency and source-owner completeness must also be usable before valid
+financial artifacts are staged. Under the current unsupported completeness contract,
+only a blocked diagnostic publishes. The financial publication path stages CSVs first
+and the VALIDATED report last. Invalid arguments also invalidate the selected/default
+destination.
 
 On failure, the program attempts to write STALE / FAILED before deleting the three
 required CSVs. If overwriting the report is denied, it attempts a temporary failure
@@ -91,15 +131,19 @@ sources. A prior successful run is never an input fallback.
 | Source access or login/export failure | Check intended view-only access for each supplied URL; have its source owner restore access. Keep the same sources and freshly fetch all three again. |
 | Malformed or ambiguous schema/row | Use URL, tab and physical row from the error to request source-owner clarification. Validate every populated tab; do not skip troublesome rows or tabs. |
 | Missing selected-date coverage | Reconfirm the operator's dates and request source-owner coverage/completeness evidence. Absence is not automatically zero activity. |
+| Missing or ambiguous Operations completeness confirmation | Ask Operations to identify the source evidence location, meaning, covered scope, approved version and validity conditions. Keep the diagnostic blocked until that actual contract is supported; do not add a fabricated approval or manual override. |
+| Changed version/content between reads or partial source read | Retain the audit/assessment, identify the affected source and have Operations establish usable current evidence. Retry all three sources freshly; matching an old snapshot does not resolve the issue. |
 | Duplicate or conflicting values | Preserve identities and provenance; have the source owner resolve the conflict. The agent/code does not choose an invented winner. |
 | Missing owner or unsupported review rule | Ask the budget source owner for the responsible owner or rule definition. A new rule requires an explicit supported implementation and validation before use. |
 | Publication or cleanup failure | Inspect the error, permissions and available storage for the selected output directory. Treat all required artifacts as unusable; quarantine any old valid-looking report that could not be marked/removed. |
-| Stale outputs or interrupted run | Require a new successful run with fresh retrieval and current audit records. Do not present a previous report as this run's result. |
+| Stale outputs or interrupted run | Require fresh retrieval and current audit records. A financial draft additionally requires supported completeness evidence; the current blocked run remains unusable. Do not present an earlier report as this run's result. |
 
 The source owner resolves business evidence; the operator restores operational
 access and confirms retry inputs. The agent explains the error and safe next step.
 The operations owner retains financial decisions. After a controlled failure check,
-perform a final successful live run and independent checks before submission.
+rerun live and independently check the actual diagnostic/evidence. A final successful
+financial run must wait for a supported completeness contract and accepted evidence;
+historical successful runs cannot satisfy this new gate.
 
 The default destination resolves to the repository `deliverables/` from the script
 location, independent of the calling directory. `--output` allows a separate
@@ -110,6 +154,8 @@ For unchanged sources and inputs, CSV content and calculation ordering remain
 deterministic. The report's fresh UTC fetch timestamps vary on every run; source
 edits also change source versions and semantic hashes. Source reads are separate
 point-in-time exports, not a cross-source transaction or completeness guarantee.
+For the current blocked runs, compare assessment reasons and business source content,
+allowing genuine fetch times to differ; no required CSVs should exist to compare.
 
 ## Recording and publication evidence
 

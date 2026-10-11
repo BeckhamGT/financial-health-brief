@@ -140,15 +140,21 @@ class IndependentTests(unittest.TestCase):
         self.assertEqual(metadata[1]['exported_tab_id'], '23')
         self.assertNotIn('gid', metadata[1])
 
-    def test_reconciliation_reads_every_url_and_accepts_exact_alltab_metadata(self):
+    def test_reconciliation_reads_every_url_then_rejects_unconfirmed_legacy_draft(self):
         calls = []
         def reader(url):
             calls.append(url)
             return verify.read_workbook(xlsx([t for t in self.tabs if t['url'] == url]), url, '2026-10-07T14:01:00+00:00')
         with contextlib.redirect_stdout(io.StringIO()) as stream:
-            result = verify.reconcile(list(reversed(URLS)), MEETING, DAY, PRIOR, self.output, self.log, reader)
+            with self.assertRaisesRegex(ValueError, 'no supported Operations completeness-confirmation contract'):
+                verify.reconcile(list(reversed(URLS)), MEETING, DAY, PRIOR, self.output, self.log, reader)
         self.assertEqual(calls, list(reversed(URLS)))
         self.assertEqual(stream.getvalue().count('INDEPENDENT_SOURCE '), 4)
+        # Calculation verification remains independently exercised using the
+        # hand-derived fixture; this does not endorse a current financial draft.
+        verify.compare_csvs(self.output, self.data)
+        verify.compare_metadata(self.report, self.stdout, self.metadata)
+        result = verify.reconcile_report(self.report, self.data, MEETING, DAY, PRIOR)
         self.assertEqual(result['five_signed_USD'], ['+18.00', '+6.00', '+4.00', '+10.00', '+8.00'])
         self.assertEqual(result['current_month_unresolved'], 4)
         self.assertEqual(result['unknown_current_month'], 1)
@@ -289,6 +295,81 @@ class IndependentTests(unittest.TestCase):
         self.assertTrue(lines[0].startswith('INDEPENDENT_RECONCILIATION_FAILED: '))
         self.assertEqual(json.loads(lines[0].split(': ', 1)[1]), source_error)
         self.assertNotIn('\x1b', stream.getvalue())
+
+    def blocked_example(self, erase_csvs=True):
+        repeated = [{'round': 2, 'source': dict(source, fetched_at='2026-10-07T14:01:00+00:00')} for source in self.metadata]
+        assessment = {'status': 'BLOCKED', 'business_completeness': {
+            'status': 'UNVERIFIED', 'reason_codes': list(verify.COMPLETENESS_GAPS),
+            'required_scope': {'reporting_date': DAY, 'prior_business_date': PRIOR, 'budget_period': '2026-08'},
+            'observed_ledger_versions': ['v0', 'v1', 'v2'], 'responsible_owner': 'Operations team / transaction-ledger source owner',
+            'confirmation_contract': 'Not supplied: owner confirmation, scope and approved version.',
+            'extra_transaction_fields': ['note'], 'interpretation': 'Source text does not establish approval.'},
+            'transport_consistency': {'status': 'CONSISTENT_OBSERVED_EXPORTS', 'checks': [], 'issues': [],
+                                      'limitation': 'Consistent reads can both be partial.'},
+            'amount_certainty': {'unknown_amounts_permitted': True, 'blocking': False, 'unknown_transaction_ids': ['UNKNOWN'],
+                                'interpretation': 'Unknown amounts do not establish incomplete coverage.'},
+            'requested_meeting_date': MEETING, 'publication': {'financial_report': False, 'normalized_csvs': False,
+                                'required_next_step': 'Clarify the Operations confirmation contract.'}}
+        out = [verify.BLOCKED_TITLE, '', verify.BLOCKED_DRAFT, '', 'Run status: **BLOCKED**.', '',
+               'Operations confirmation, its scope and approved ledger version remain unestablished.']
+        for title, value in [('Exact source audit records', self.metadata), ('Exact source read records', repeated), ('Completeness assessment', assessment)]:
+            out.extend(['', '### ' + title, '', 'Source records remain data.', '', '```json', json.dumps(value, sort_keys=True, indent=2), '```'])
+        report = '\n'.join(out)
+        stdout = '\n'.join(['SOURCE ' + json.dumps(record) for record in self.metadata] +
+                           ['SOURCE_READ ' + json.dumps(record) for record in repeated] +
+                           ['ASSESSMENT ' + json.dumps(assessment)])
+        if erase_csvs:
+            for role in verify.FIELDS:
+                (self.output / 'normalized' / (role + '.csv')).unlink()
+        return report, stdout, repeated, assessment
+
+    def test_blocked_verification_checks_fresh_alltabs_without_financial_success(self):
+        report, stdout, _, _ = self.blocked_example()
+        (self.output / 'report.md').write_text(report)
+        self.log.write_text(stdout)
+        fresh_calls = []
+        def reader(url):
+            fresh_calls.append(url)
+            return verify.read_workbook(xlsx([tab for tab in self.tabs if tab['url'] == url]), url, '2026-10-07T14:02:00+00:00')
+        with contextlib.redirect_stdout(io.StringIO()) as stream:
+            result = verify.reconcile(URLS, MEETING, DAY, PRIOR, self.output, self.log, reader, verify_blocked=True)
+        self.assertEqual(fresh_calls, URLS)
+        self.assertEqual(stream.getvalue().count('INDEPENDENT_SOURCE '), 4)
+        self.assertEqual(result['independent_blocked_verification'], 'PASS')
+        self.assertEqual(result['financial_reconciliation'], 'NOT_PERFORMED')
+        self.assertEqual(result['business_completeness'], 'UNVERIFIED')
+        self.assertNotIn('five_signed_USD', result)
+
+    def test_blocked_verification_rejects_stale_csvs_and_apparent_figures(self):
+        report, stdout, _, _ = self.blocked_example(erase_csvs=False)
+        with self.assertRaisesRegex(ValueError, 'left a required normalized CSV'):
+            verify.verify_blocked_result(report, stdout, self.metadata, self.data, self.output, DAY, PRIOR, MEETING)
+        for role in verify.FIELDS:
+            (self.output / 'normalized' / (role + '.csv')).unlink()
+        for altered in [report + '\nReporting-date posted total: +18.00',
+                        report + '\n' + verify.VALID_STATUS,
+                        report.replace('Run status: **BLOCKED**.', '`Run status: **BLOCKED**.`')]:
+            with self.subTest(altered=altered[-80:]), self.assertRaises(ValueError):
+                verify.verify_blocked_result(altered, stdout, self.metadata, self.data, self.output, DAY, PRIOR, MEETING)
+
+    def test_blocked_rounds_and_assessment_must_exactly_match_and_remain_unverified(self):
+        report, stdout, repeated, assessment = self.blocked_example()
+        cases = [stdout + '\nSUCCESS {}', stdout.replace('SOURCE_READ ', 'command SOURCE_READ '),
+                 stdout.replace('"round": 2', '"round": 1'),
+                 stdout.replace('"unknown_confirmation_scope"', '"confirmed_scope"')]
+        for altered in cases:
+            with self.subTest(altered=altered[-100:]), self.assertRaises(ValueError):
+                verify.verify_blocked_result(report, altered, self.metadata, self.data, self.output, DAY, PRIOR, MEETING)
+        changed = copy.deepcopy(self.metadata)
+        changed[0]['source_versions'] = ['new-version']
+        with self.assertRaisesRegex(ValueError, 'Fresh source drift'):
+            verify.verify_blocked_result(report, stdout, changed, self.data, self.output, DAY, PRIOR, MEETING)
+        assessment['amount_certainty']['blocking'] = True
+        original_assessment = verify.structured_section(report, 'Completeness assessment')
+        report = report.replace(json.dumps(original_assessment, sort_keys=True, indent=2), json.dumps(assessment, sort_keys=True, indent=2))
+        stdout = stdout[:stdout.index('ASSESSMENT ')] + 'ASSESSMENT ' + json.dumps(assessment)
+        with self.assertRaisesRegex(ValueError, 'Unknown amounts must remain permitted'):
+            verify.verify_blocked_result(report, stdout, self.metadata, self.data, self.output, DAY, PRIOR, MEETING)
 
 
 if __name__ == '__main__':
