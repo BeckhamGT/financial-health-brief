@@ -1,22 +1,3 @@
-Complete publication of the reviewed Project A revision.
-
-Record my actual review observations accurately, separately from stakeholder approval. Address any requested corrections, run the checks appropriate to those changes, and ensure the final required outputs come from a successful fresh-source run.
-
-Check the intended diff and preserve the original interviews, previous Git history, and Entire capture configuration. Commit and push the completed revision.
-
-Use the installed Entire documentation to finalize any pending capture, including operator session 01a117bb-d557-7f03-a3a0-2db7bf41af0d, without rewriting or manufacturing transcript evidence.
-
-Verify remotely that:
-
-- The code revision and required deliverables are present.
-- This build session and the operator evaluation are preserved in checkpoint data.
-- The final recorded SOURCE output matches report.md.
-- The report is VALIDATED and remains a draft for human review.
-
-Return the final commit ID, checkpoint IDs, remote verification results, remaining unresolved items, and repository URL. Report any capture or publication failure clearly.
-
----
-
 # Files mentioned by the user:
 
 ## interview-r62mbg-20261011-0558.md: /Users/user/Downloads/interview-r62mbg-20261011-0558.md
