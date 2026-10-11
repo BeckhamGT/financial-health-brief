@@ -1,0 +1,115 @@
+{
+  "cli_version": "0.11.3",
+  "checkpoint_id": "01M4NYJNH5TGJQYP96XZK7MDB0",
+  "session_id": "01a11761-440d-7862-8928-ce5db3214385",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T17:01:17.816946Z",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "save_step_count": 2,
+  "files_touched": [
+    "README.md",
+    "daily-financial-health-brief/SKILL.md",
+    "daily-financial-health-brief/references/ledger-assurance.json",
+    "daily-financial-health-brief/references/operating-rules.md",
+    "daily-financial-health-brief/references/runtime.md",
+    "daily-financial-health-brief/references/validation.md",
+    "daily-financial-health-brief/scripts/brief.py",
+    "daily-financial-health-brief/scripts/reconcile_live.py",
+    "daily-financial-health-brief/scripts/test_brief.py",
+    "daily-financial-health-brief/scripts/test_reconcile_live.py",
+    "deliverables/normalized/budget.csv",
+    "deliverables/normalized/revenue.csv",
+    "deliverables/normalized/transactions.csv",
+    "deliverables/report.md",
+    "docs/resubmission.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6.1-sol",
+  "turn_id": "1dd2a3d6e2d7",
+  "checkpoint_transcript_start": 1605,
+  "transcript_lines_at_start": 1605,
+  "compact_transcript_start": 158,
+  "token_usage": {
+    "input_tokens": 514937,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 10275968,
+    "output_tokens": 56582,
+    "api_call_count": 78,
+    "subagent_tokens_complete": false
+  },
+  "session_metrics": {
+    "turn_count": 8
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T17:01:17.565136Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 65,
+    "human_removed": 288,
+    "total_committed": 10,
+    "total_lines_changed": 353,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1167,
+      "user_lines_removed": 339,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".codex/hooks.json": 88,
+        "README.md": 25,
+        "daily-financial-health-brief/SKILL.md": 9,
+        "daily-financial-health-brief/references/ledger-assurance.json": 12,
+        "daily-financial-health-brief/references/operating-rules.md": 35,
+        "daily-financial-health-brief/references/runtime.md": 44,
+        "daily-financial-health-brief/references/validation.md": 45,
+        "daily-financial-health-brief/scripts/brief.py": 81,
+        "daily-financial-health-brief/scripts/reconcile_live.py": 87,
+        "daily-financial-health-brief/scripts/test_brief.py": 122,
+        "daily-financial-health-brief/scripts/test_reconcile_live.py": 56,
+        "deliverables/normalized/budget.csv": 11,
+        "deliverables/normalized/revenue.csv": 26,
+        "deliverables/normalized/transactions.csv": 71,
+        "deliverables/report.md": 238,
+        "docs/resubmission.md": 217
+      },
+      "user_removed_per_file": {
+        "README.md": 27,
+        "daily-financial-health-brief/SKILL.md": 7,
+        "daily-financial-health-brief/references/operating-rules.md": 36,
+        "daily-financial-health-brief/references/runtime.md": 39,
+        "daily-financial-health-brief/references/validation.md": 88,
+        "daily-financial-health-brief/scripts/brief.py": 38,
+        "daily-financial-health-brief/scripts/reconcile_live.py": 28,
+        "daily-financial-health-brief/scripts/test_brief.py": 25,
+        "daily-financial-health-brief/scripts/test_reconcile_live.py": 16,
+        "deliverables/report.md": 35
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 88,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1089,
+      "agent_lines_removed": 339,
+      "user_added_per_file": {
+        ".codex/hooks.json": 88
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 88,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1089,
+      "agent_lines_removed": 339,
+      "user_added_per_file": {
+        ".codex/hooks.json": 88
+      }
+    }
+  ]
+}
